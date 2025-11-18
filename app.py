@@ -57,6 +57,447 @@ def init_session_state():
 init_session_state()
 
 
+# ============================================================================
+# Helper Functions - Define before main content
+# ============================================================================
+
+def process_video(
+    video_path: Path,
+    pose_estimator: YOLOPoseEstimator,
+    fps: float,
+    analyze_phases: bool,
+    extract_trajectory: bool,
+) -> Dict:
+    """Process uploaded video and extract analysis data.
+
+    Args:
+        video_path: Path to video file.
+        pose_estimator: YOLO pose estimator instance.
+        fps: Video FPS.
+        analyze_phases: Whether to detect stroke phases.
+        extract_trajectory: Whether to extract hand trajectories.
+
+    Returns:
+        Dictionary with analysis results.
+    """
+    st.markdown("### Processing Video...")
+
+    # Create placeholders
+    video_placeholder = st.empty()
+    metrics_placeholder = st.empty()
+    progress_bar = st.progress(0)
+
+    # Storage for analysis
+    pose_sequence = []
+    left_hand_path = []
+    right_hand_path = []
+    angles_over_time = {
+        "left_elbow": [],
+        "right_elbow": [],
+        "left_shoulder": [],
+        "right_shoulder": [],
+    }
+
+    try:
+        camera = VideoFileCamera(str(video_path))
+        camera.open()
+
+        total_frames = camera.get_total_frames()
+
+        # Initialize metrics
+        frame_times = []
+        detected_count = 0
+
+        # Get visualization settings from session state
+        show_skeleton = st.session_state.get('show_skeleton', True)
+        show_bbox = st.session_state.get('show_bbox', False)
+        show_angles = st.session_state.get('show_angles', True)
+        show_fps = st.session_state.get('show_fps', True)
+        show_trajectory = st.session_state.get('show_trajectory', False)
+
+        for frame_idx, frame in enumerate(camera.stream_frames()):
+            # Update progress
+            progress = (frame_idx + 1) / total_frames
+            progress_bar.progress(progress)
+
+            # Estimate pose
+            start_time = time.time()
+            pose_data, _ = pose_estimator.estimate_pose(frame, return_image=False)
+            inference_time = time.time() - start_time
+
+            frame_times.append(inference_time)
+
+            # Analyze pose
+            if pose_data is not None:
+                detected_count += 1
+                pose_sequence.append(pose_data)
+
+                # Extract trajectories
+                if extract_trajectory:
+                    left_wrist = pose_estimator.get_keypoint(pose_data, "left_wrist")
+                    right_wrist = pose_estimator.get_keypoint(pose_data, "right_wrist")
+
+                    if left_wrist:
+                        left_hand_path.append((left_wrist[0], left_wrist[1]))
+                    if right_wrist:
+                        right_hand_path.append((right_wrist[0], right_wrist[1]))
+
+                # Extract angles
+                angles = st.session_state.swimming_analyzer.get_body_angles(pose_data)
+                for angle_name in angles_over_time.keys():
+                    value = angles.get(angle_name)
+                    angles_over_time[angle_name].append(value if value is not None else np.nan)
+
+                # Draw visualizations
+                if show_skeleton:
+                    frame = st.session_state.pose_overlay.draw_skeleton(frame, pose_data)
+
+                if show_bbox and pose_data.get("bbox"):
+                    frame = st.session_state.pose_overlay.draw_bbox(frame, pose_data["bbox"])
+
+                if show_angles:
+                    frame = st.session_state.pose_overlay.draw_angles(frame, pose_data, angles)
+
+                if show_trajectory and len(left_hand_path) > 1:
+                    frame = st.session_state.pose_overlay.draw_trajectory(
+                        frame, left_hand_path[-30:], color=(255, 255, 0)
+                    )
+                    frame = st.session_state.pose_overlay.draw_trajectory(
+                        frame, right_hand_path[-30:], color=(0, 255, 255)
+                    )
+
+            # Draw FPS
+            if show_fps:
+                current_fps = 1.0 / inference_time if inference_time > 0 else 0
+                frame = st.session_state.pose_overlay.draw_fps(frame, current_fps)
+
+            # Convert BGR to RGB for Streamlit
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+            # Display frame
+            video_placeholder.image(frame_rgb, channels="RGB", use_container_width=True)
+
+            # Display metrics
+            with metrics_placeholder.container():
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.metric("Frame", f"{frame_idx + 1}/{total_frames}")
+                with col2:
+                    avg_fps = 1.0 / (sum(frame_times) / len(frame_times))
+                    st.metric("Avg FPS", f"{avg_fps:.1f}")
+                with col3:
+                    st.metric("Detections", f"{detected_count}/{frame_idx + 1}")
+                with col4:
+                    detection_rate = (detected_count / (frame_idx + 1)) * 100
+                    st.metric("Detection Rate", f"{detection_rate:.1f}%")
+
+        camera.release()
+        progress_bar.progress(1.0)
+        st.success("✅ Video processing complete!")
+
+        # Analyze phases if requested
+        phases = None
+        if analyze_phases and len(left_hand_path) > 10:
+            with st.spinner("Detecting stroke phases..."):
+                phases = st.session_state.phase_detector.detect_phases_freestyle(
+                    np.array(left_hand_path), fps, "left"
+                )
+
+        # Compile results
+        return {
+            "pose_sequence": pose_sequence,
+            "left_hand_path": left_hand_path,
+            "right_hand_path": right_hand_path,
+            "angles": angles_over_time,
+            "phases": phases,
+            "fps": fps,
+            "total_frames": total_frames,
+            "detection_rate": detection_rate,
+        }
+
+    except Exception as e:
+        st.error(f"Error processing video: {e}")
+        return None
+
+
+def display_analysis_results(results: Dict, video_name: str):
+    """Display analysis results for a single video.
+
+    Args:
+        results: Analysis results dictionary.
+        video_name: Name of the video.
+    """
+    st.markdown("### Analysis Results")
+
+    # Display phases if available
+    if results.get("phases"):
+        st.subheader("🔄 Detected Stroke Phases")
+
+        phases = results["phases"]
+        phase_df = []
+
+        for phase in phases:
+            phase_df.append({
+                "Phase": phase["phase"].value,
+                "Start Frame": phase["start_frame"],
+                "End Frame": phase["end_frame"],
+                "Duration (s)": f"{phase['duration']:.2f}",
+            })
+
+        st.dataframe(phase_df, use_container_width=True)
+
+        # Phase durations chart
+        phase_durations = st.session_state.phase_detector.get_phase_durations(phases)
+
+        if phase_durations:
+            fig = go.Figure(data=[
+                go.Bar(
+                    x=list(phase_durations.keys()),
+                    y=list(phase_durations.values()),
+                    marker_color="lightblue",
+                )
+            ])
+            fig.update_layout(
+                title="Average Phase Durations",
+                xaxis_title="Phase",
+                yaxis_title="Duration (seconds)",
+                height=400,
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+    # Trajectory visualization
+    if results.get("left_hand_path") and results.get("right_hand_path"):
+        st.subheader("✋ Hand Trajectories")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            left_path = np.array(results["left_hand_path"])
+            if len(left_path) > 0:
+                fig = go.Figure(data=go.Scatter(
+                    x=left_path[:, 0],
+                    y=-left_path[:, 1],  # Invert Y for correct orientation
+                    mode="lines+markers",
+                    name="Left Hand",
+                    line=dict(color="blue", width=2),
+                ))
+                fig.update_layout(
+                    title="Left Hand Path",
+                    xaxis_title="X Position",
+                    yaxis_title="Y Position",
+                    height=400,
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+        with col2:
+            right_path = np.array(results["right_hand_path"])
+            if len(right_path) > 0:
+                fig = go.Figure(data=go.Scatter(
+                    x=right_path[:, 0],
+                    y=-right_path[:, 1],
+                    mode="lines+markers",
+                    name="Right Hand",
+                    line=dict(color="red", width=2),
+                ))
+                fig.update_layout(
+                    title="Right Hand Path",
+                    xaxis_title="X Position",
+                    yaxis_title="Y Position",
+                    height=400,
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+
+def compare_strokes(video1_data: Dict, video2_data: Dict, fps: float) -> Dict:
+    """Compare two swimming strokes.
+
+    Args:
+        video1_data: Reference video data.
+        video2_data: Comparison video data.
+        fps: FPS for analysis.
+
+    Returns:
+        Comparison results dictionary.
+    """
+    # Prepare stroke data
+    stroke1 = {
+        "left_hand_path": video1_data["left_hand_path"],
+        "right_hand_path": video1_data["right_hand_path"],
+        "angles": {k: np.array(v) for k, v in video1_data["angles"].items()},
+    }
+
+    stroke2 = {
+        "left_hand_path": video2_data["left_hand_path"],
+        "right_hand_path": video2_data["right_hand_path"],
+        "angles": {k: np.array(v) for k, v in video2_data["angles"].items()},
+    }
+
+    # Perform comprehensive comparison
+    results = st.session_state.similarity_ensemble.comprehensive_comparison(
+        stroke1, stroke2, fps
+    )
+
+    return results
+
+
+def display_comparison_results(results: Dict, video1_name: str, video2_name: str):
+    """Display comparison results between two strokes.
+
+    Args:
+        results: Comparison results.
+        video1_name: Reference video name.
+        video2_name: Comparison video name.
+    """
+    st.markdown("### Comparison Results")
+
+    # Overall score
+    overall_score = results.get("overall_score", 0)
+
+    col1, col2, col3 = st.columns([2, 1, 1])
+
+    with col1:
+        st.metric(
+            "Overall Similarity Score",
+            f"{overall_score:.1f}/100",
+            delta=None,
+        )
+
+    with col2:
+        if overall_score >= 90:
+            st.success("🌟 Excellent!")
+        elif overall_score >= 75:
+            st.info("👍 Good")
+        elif overall_score >= 60:
+            st.warning("⚠️ Needs Work")
+        else:
+            st.error("❌ Significant Differences")
+
+    st.markdown("---")
+
+    # Individual scores
+    st.subheader("📊 Detailed Scores")
+
+    scores = results.get("individual_scores", {})
+
+    score_data = []
+    for metric, score in scores.items():
+        score_data.append({
+            "Metric": metric.replace("_", " ").title(),
+            "Score": f"{score:.1f}",
+        })
+
+    if score_data:
+        col1, col2 = st.columns([2, 1])
+
+        with col1:
+            # Radar chart
+            categories = [s["Metric"] for s in score_data]
+            values = [float(s["Score"]) for s in score_data]
+
+            fig = go.Figure()
+
+            fig.add_trace(go.Scatterpolar(
+                r=values,
+                theta=categories,
+                fill='toself',
+                name='Similarity Scores',
+            ))
+
+            fig.update_layout(
+                polar=dict(
+                    radialaxis=dict(
+                        visible=True,
+                        range=[0, 100],
+                    )
+                ),
+                showlegend=False,
+                height=400,
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
+
+        with col2:
+            st.dataframe(score_data, use_container_width=True, hide_index=True)
+
+    # Recommendations
+    st.markdown("---")
+    st.subheader("💡 Recommendations")
+
+    recommendations = results.get("recommendations", [])
+    for i, rec in enumerate(recommendations, 1):
+        st.markdown(f"**{i}.** {rec}")
+
+    # Additional measures
+    st.markdown("---")
+    st.subheader("🔬 Additional Similarity Measures")
+
+    additional = results.get("additional_measures", {})
+    if additional:
+        cols = st.columns(len(additional))
+        for col, (measure, value) in zip(cols, additional.items()):
+            with col:
+                st.metric(
+                    measure.replace("_", " ").title(),
+                    f"{value:.2f}",
+                )
+
+
+def display_detailed_analysis(video_data: Dict, video_name: str):
+    """Display detailed analysis for a single video.
+
+    Args:
+        video_data: Video analysis data.
+        video_name: Name of the video.
+    """
+    st.markdown(f"### Analysis of: {video_name}")
+
+    # Summary metrics
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        st.metric("Total Frames", video_data["total_frames"])
+    with col2:
+        st.metric("FPS", f"{video_data['fps']:.1f}")
+    with col3:
+        st.metric("Detection Rate", f"{video_data['detection_rate']:.1f}%")
+    with col4:
+        duration = video_data["total_frames"] / video_data["fps"]
+        st.metric("Duration", f"{duration:.1f}s")
+
+    st.markdown("---")
+
+    # Joint angles over time
+    st.subheader("📐 Joint Angles Over Time")
+
+    angles = video_data["angles"]
+
+    for joint_name, values in angles.items():
+        if len(values) > 0:
+            values_array = np.array(values)
+            # Remove NaN values for plotting
+            valid_indices = ~np.isnan(values_array)
+
+            if np.any(valid_indices):
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(
+                    x=np.where(valid_indices)[0],
+                    y=values_array[valid_indices],
+                    mode="lines",
+                    name=joint_name.replace("_", " ").title(),
+                ))
+                fig.update_layout(
+                    title=joint_name.replace("_", " ").title(),
+                    xaxis_title="Frame",
+                    yaxis_title="Angle (degrees)",
+                    height=300,
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+
+# ============================================================================
+# Sidebar Configuration
+# ============================================================================
+
 # Sidebar configuration
 with st.sidebar:
     st.header("⚙️ Settings")
