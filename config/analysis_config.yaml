@@ -1,0 +1,45 @@
+# Analysis Configuration
+
+# Dynamic Time Warping (DTW) Settings
+dtw:
+  window_type: "sakoe_chiba"  # Window constraint type
+  window_size: 10              # Sakoe-Chiba band width
+  distance_metric: "euclidean" # Distance metric
+  normalize: true              # Normalize sequences before comparison
+  step_pattern: "symmetric2"   # DTW step pattern
+
+# Frechet Distance Settings
+frechet:
+  distance_metric: "euclidean"
+  normalize: true
+
+# Stroke Phase Detection
+stroke_phases:
+  # Phases: entry, catch, pull, push, recovery
+  velocity_threshold: 0.1     # Hand velocity threshold for phase detection
+  min_phase_duration: 0.2     # Minimum phase duration in seconds
+  smoothing_window: 5         # Smoothing window for velocity
+
+# Similarity Scoring Weights
+similarity_weights:
+  dtw_score: 0.4              # Weight for DTW similarity
+  frechet_score: 0.3          # Weight for Frechet distance
+  phase_timing_score: 0.2     # Weight for phase timing match
+  angle_similarity: 0.1       # Weight for angle similarity
+
+# Feature Extraction
+features:
+  smoothing_method: "savgol"  # Smoothing method: kalman, savgol, ma
+  savgol_window: 11           # Savitzky-Golay window size (odd number)
+  savgol_polyorder: 3         # Polynomial order for Savgol
+  velocity_method: "finite_diff"  # Velocity calculation method
+
+# Symmetry Analysis
+symmetry:
+  asymmetry_threshold: 0.15   # 15% asymmetry threshold for alerts
+  temporal_window: 5          # Window for temporal symmetry analysis
+
+# Stroke Rate
+stroke_rate:
+  min_cycle_duration: 0.5     # Minimum stroke cycle duration (seconds)
+  max_cycle_duration: 3.0     # Maximum stroke cycle duration (seconds)

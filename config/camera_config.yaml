@@ -1,0 +1,44 @@
+# Camera Configuration
+
+# Webcam Settings
+webcam:
+  camera_id: 0               # Default camera ID (0 = first camera)
+  width: 1280                # Frame width
+  height: 720                # Frame height
+  fps: 30                    # Target FPS
+  backend: null              # OpenCV backend (null = auto, 'DSHOW', 'V4L2', etc.)
+  buffer_size: 1             # Frame buffer size (1 = minimal latency)
+
+# Video File Settings
+video_file:
+  supported_formats:
+    - .mp4
+    - .avi
+    - .mov
+    - .mkv
+    - .flv
+    - .wmv
+  playback_speed: 1.0        # Playback speed multiplier
+  loop: false                # Loop video playback
+  start_frame: 0             # Start from specific frame
+
+# Intel RealSense D455 Settings
+realsense:
+  enable_rgb: true
+  enable_depth: true
+  rgb_width: 1280
+  rgb_height: 720
+  rgb_fps: 30
+  depth_width: 1280
+  depth_height: 720
+  depth_fps: 30
+  align_to: "color"          # Align depth to color stream
+  visual_preset: "High Accuracy"  # Depth quality preset
+
+# General Camera Settings
+general:
+  auto_exposure: true
+  auto_white_balance: true
+  flip_horizontal: false     # Mirror image
+  flip_vertical: false
+  rotation: 0                # Rotation in degrees (0, 90, 180, 270)
