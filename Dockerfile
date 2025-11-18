@@ -94,7 +94,7 @@ CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0
 # ========================================
 # GPU Stage (CUDA support)
 # ========================================
-FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04 AS gpu-base
+FROM nvidia/cuda:12.2.2-cudnn8-runtime-ubuntu22.04 AS gpu-base
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
