@@ -121,6 +121,23 @@ SwimVision Pro combines cutting-edge AI and computer vision to help swimmers and
 
 ### Installation
 
+#### Option 1: Automated Setup Script (Recommended)
+
+```bash
+# Clone the repository
+git clone https://github.com/thebibbi/swimvision.git
+cd swimvision
+
+# Run setup script
+# On macOS/Linux:
+bash scripts/setup.sh
+
+# On Windows:
+scripts\setup.bat
+```
+
+#### Option 2: Manual Installation
+
 ```bash
 # Clone the repository
 git clone https://github.com/thebibbi/swimvision.git
@@ -136,17 +153,61 @@ venv\Scripts\activate
 source venv/bin/activate
 
 # Install dependencies
-pip install -r requirements.txt
+pip install -r requirements.txt -r requirements-dev.txt
+pip install -e .
 
-# Download YOLO11 pose models
-python scripts/download_models.py
-
-# (Optional) Set up PostgreSQL database
-# For development, SQLite is used by default
+# Set up pre-commit hooks
+pre-commit install
 
 # Configure environment variables
 cp .env.example .env
 # Edit .env with your settings
+```
+
+#### Option 3: Docker (Easiest)
+
+```bash
+# Clone the repository
+git clone https://github.com/thebibbi/swimvision.git
+cd swimvision
+
+# Start with Docker Compose (development)
+docker-compose --profile dev up -d
+
+# Access at http://localhost:8501
+
+# View logs
+docker-compose logs -f app-dev
+
+# Stop
+docker-compose down
+```
+
+#### Using Makefile Commands
+
+We provide a `Makefile` for common development tasks:
+
+```bash
+# View all available commands
+make help
+
+# Setup development environment
+make setup-dev
+
+# Run tests
+make test
+
+# Lint and format code
+make lint
+make format
+
+# Start application
+make run
+
+# Docker commands
+make docker-up      # Start dev environment
+make docker-down    # Stop containers
+make docker-logs    # View logs
 ```
 
 ### Run the Application
@@ -285,17 +346,22 @@ swimvision-pro/
 ## 🧪 Testing
 
 ```bash
-# Run all tests
-pytest
+# Run all tests with coverage (recommended)
+make test
 
-# Run with coverage
-pytest --cov=src --cov-report=html
+# Or use pytest directly:
+pytest tests/ -v --cov=src --cov-report=html
+
+# Run unit tests only
+make test-unit
+# or: pytest tests/unit/ -v
+
+# Run integration tests only
+make test-integration
+# or: pytest tests/integration/ -v
 
 # Run specific test file
-pytest tests/test_pose_estimation.py
-
-# Run with verbose output
-pytest -v
+pytest tests/test_pose_estimation.py -v
 
 # View coverage report
 open htmlcov/index.html  # macOS
@@ -310,27 +376,86 @@ xdg-open htmlcov/index.html  # Linux
 ### Code Quality
 
 ```bash
-# Lint code
-ruff check .
+# Lint code (recommended: use make)
+make lint
+# or: ruff check src/ tests/
 
 # Format code
-ruff format .
+make format
+# or: ruff format src/ tests/
 
 # Type checking
-mypy src/
+mypy src/ --ignore-missing-imports
 
 # Run all quality checks
-ruff check . && mypy src/ && pytest
+make lint && make test
 ```
 
 ### Pre-commit Hooks
 
 ```bash
 # Install pre-commit hooks
-pre-commit install
+make pre-commit
+# or: pre-commit install
 
 # Run hooks manually
 pre-commit run --all-files
+```
+
+### Docker Development
+
+```bash
+# Build Docker images
+make docker-build
+# or: docker-compose build
+
+# Start development environment (with hot reload)
+make docker-up
+# or: docker-compose --profile dev up -d
+
+# Start production environment
+make docker-up-prod
+# or: docker-compose --profile prod up -d
+
+# Start with GPU support (requires NVIDIA Docker)
+make docker-up-gpu
+# or: docker-compose --profile gpu up -d
+
+# View logs
+make docker-logs
+# or: docker-compose logs -f app-dev
+
+# Access shell in container
+make docker-shell
+# or: docker-compose exec app-dev bash
+
+# Stop containers
+make docker-down
+# or: docker-compose down
+
+# Clean up (remove volumes)
+make docker-clean
+# or: docker-compose down -v
+```
+
+### Database Management
+
+```bash
+# Access PostgreSQL shell
+make db-shell
+# or: docker-compose exec postgres psql -U swimvision
+
+# Create database migration
+make db-migrate message="your migration message"
+# or: alembic revision --autogenerate -m "your message"
+
+# Apply migrations
+make db-upgrade
+# or: alembic upgrade head
+
+# Rollback migration
+make db-downgrade
+# or: alembic downgrade -1
 ```
 
 ### Adding New Features

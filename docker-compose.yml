@@ -1,0 +1,161 @@
+version: '3.8'
+
+services:
+  # ========================================
+  # PostgreSQL Database
+  # ========================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: swimvision-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-swimvision}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-swimvision_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-swimvision}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-swimvision}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - swimvision-network
+
+  # ========================================
+  # SwimVision App - Development
+  # ========================================
+  app-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: swimvision-app-dev
+    ports:
+      - "${STREAMLIT_PORT:-8501}:8501"
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER:-swimvision}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-swimvision_dev}
+      - POSTGRES_DB=${POSTGRES_DB:-swimvision}
+      - PYTHONPATH=/app
+    volumes:
+      # Mount source code for live reloading
+      - ./src:/app/src
+      - ./config:/app/config
+      - ./tests:/app/tests
+      - ./data:/app/data
+      - ./models:/app/models
+      # Preserve Python packages
+      - dev_venv:/usr/local/lib/python3.10/site-packages
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - swimvision-network
+    profiles:
+      - dev
+
+  # ========================================
+  # SwimVision App - Production
+  # ========================================
+  app-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: swimvision-app-prod
+    ports:
+      - "${STREAMLIT_PORT:-8501}:8501"
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER:-swimvision}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-swimvision_dev}
+      - POSTGRES_DB=${POSTGRES_DB:-swimvision}
+    volumes:
+      - ./data:/app/data:ro
+      - ./models:/app/models:ro
+      - ./config:/app/config:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - swimvision-network
+    profiles:
+      - prod
+
+  # ========================================
+  # SwimVision App - GPU Support
+  # ========================================
+  app-gpu:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: gpu-base
+    container_name: swimvision-app-gpu
+    ports:
+      - "${STREAMLIT_PORT:-8501}:8501"
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER:-swimvision}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-swimvision_dev}
+      - POSTGRES_DB=${POSTGRES_DB:-swimvision}
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./config:/app/config
+    depends_on:
+      postgres:
+        condition: service_healthy
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      - swimvision-network
+    profiles:
+      - gpu
+
+  # ========================================
+  # pgAdmin - Database Management (Optional)
+  # ========================================
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: swimvision-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@swimvision.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    networks:
+      - swimvision-network
+    profiles:
+      - tools
+
+volumes:
+  postgres_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+  dev_venv:
+    driver: local
+
+networks:
+  swimvision-network:
+    driver: bridge
