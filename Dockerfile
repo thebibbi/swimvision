@@ -4,7 +4,7 @@
 # ========================================
 # Base Stage - Common dependencies
 # ========================================
-FROM python:3.10-slim AS base
+FROM python:3.14-slim AS base
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
