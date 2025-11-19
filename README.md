@@ -40,6 +40,12 @@ SwimVision Pro combines cutting-edge AI and computer vision to help swimmers and
 - ✅ Kalman filtering for trajectory smoothing
 - ✅ Stroke rate and cycle time measurement
 - ✅ Asymmetry detection and comprehensive symmetry analysis
+- ✅ **Occlusion Tracking** - Handle underwater hand tracking with 5 methods:
+  - Kalman-only (baseline)
+  - Kalman with prediction during occlusion
+  - Stroke phase-aware prediction
+  - Interpolation-based trajectory completion
+  - Hybrid (combines Kalman + phase awareness)
 
 ### Phase 4: Injury Prediction (Week 4) ⏳
 - ⏳ CatBoost/XGBoost models for injury risk prediction

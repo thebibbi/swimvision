@@ -545,6 +545,42 @@ with st.sidebar:
 
     st.markdown("---")
 
+    # Occlusion Tracking settings
+    st.subheader("🔍 Occlusion Tracking")
+
+    enable_occlusion_tracking = st.checkbox("Enable Occlusion Tracking", value=False, help="Handle underwater hand tracking")
+
+    if enable_occlusion_tracking:
+        tracking_method = st.selectbox(
+            "Tracking Method",
+            ["Hybrid (Recommended)", "Kalman Prediction", "Phase-Aware", "Interpolation", "Kalman Only"],
+            help="Method for handling occluded hands",
+        )
+
+        # Map to enum values
+        tracking_method_map = {
+            "Hybrid (Recommended)": "hybrid",
+            "Kalman Prediction": "kalman_predict",
+            "Phase-Aware": "phase_aware",
+            "Interpolation": "interpolation",
+            "Kalman Only": "kalman",
+        }
+        st.session_state.tracking_method = tracking_method_map[tracking_method]
+
+        show_occlusion_overlay = st.checkbox("Show Occlusion Overlay", value=True)
+        show_prediction_confidence = st.checkbox("Show Prediction Confidence", value=True)
+    else:
+        st.session_state.tracking_method = None
+        show_occlusion_overlay = False
+        show_prediction_confidence = False
+
+    # Store in session state for access in processing
+    st.session_state.enable_occlusion_tracking = enable_occlusion_tracking
+    st.session_state.show_occlusion_overlay = show_occlusion_overlay
+    st.session_state.show_prediction_confidence = show_prediction_confidence
+
+    st.markdown("---")
+
     # Visualization settings
     st.subheader("Visualization")
 
