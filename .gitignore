@@ -131,3 +131,6 @@ $RECYCLE.BIN/
 tmp/
 temp/
 *.tmp
+yolo11n-pose.pt
+yolo11s-pose.pt
+setup.sh

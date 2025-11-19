@@ -4,7 +4,7 @@
 yolo:
   model: "yolo11n-pose.pt"  # Options: yolo11n-pose, yolo11s-pose, yolo11m-pose
   device: "cpu"              # Options: cpu, cuda, mps (for Apple Silicon)
-  confidence: 0.5            # Minimum confidence threshold (0.0-1.0)
+  confidence: 0.01           # Minimum confidence threshold (0.0-1.0) - very low for swimming videos
   iou: 0.7                   # IoU threshold for NMS
   max_det: 1                 # Maximum number of detections (1 for single swimmer)
   imgsz: 640                 # Input image size (higher = more accurate, slower)
