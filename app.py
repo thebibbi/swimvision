@@ -10,9 +10,11 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from src.analysis.dtw_analyzer import DTWAnalyzer
+from src.analysis.features_extractor import FeaturesExtractor
 from src.analysis.frechet_analyzer import FrechetAnalyzer
 from src.analysis.stroke_phases import StrokePhaseDetector
 from src.analysis.stroke_similarity import StrokeSimilarityEnsemble
+from src.analysis.symmetry_analyzer import SymmetryAnalyzer
 from src.cameras.video_file import VideoFileCamera
 from src.cameras.webcam import WebcamCamera
 from src.pose.swimming_keypoints import SwimmingKeypoints
@@ -50,6 +52,10 @@ def init_session_state():
         st.session_state.phase_detector = StrokePhaseDetector()
     if "similarity_ensemble" not in st.session_state:
         st.session_state.similarity_ensemble = StrokeSimilarityEnsemble()
+    if "features_extractor" not in st.session_state:
+        st.session_state.features_extractor = FeaturesExtractor(fps=30.0)
+    if "symmetry_analyzer" not in st.session_state:
+        st.session_state.symmetry_analyzer = SymmetryAnalyzer(fps=30.0)
     if "analyzed_videos" not in st.session_state:
         st.session_state.analyzed_videos = {}
 
@@ -505,7 +511,7 @@ with st.sidebar:
     # Mode selection
     mode = st.selectbox(
         "Mode",
-        ["Upload Video", "Compare Strokes", "Stroke Analysis"],
+        ["Upload Video", "Compare Strokes", "Stroke Analysis", "Biomechanical Features", "Symmetry Analysis"],
         help="Select analysis mode",
     )
 
@@ -676,6 +682,263 @@ elif mode == "Stroke Analysis":
 
         # Display detailed analysis
         display_detailed_analysis(video_data, selected_video)
+
+elif mode == "Biomechanical Features":
+    st.header("🔬 Biomechanical Feature Analysis")
+
+    if len(st.session_state.analyzed_videos) == 0:
+        st.info("Please upload and analyze a video first using 'Upload Video' mode.")
+    else:
+        selected_video = st.selectbox(
+            "Select Video to Analyze",
+            options=list(st.session_state.analyzed_videos.keys()),
+        )
+
+        video_data = st.session_state.analyzed_videos[selected_video]
+
+        # Update FPS for extractors if needed
+        fps = video_data.get("fps", 30.0)
+        st.session_state.features_extractor.fps = fps
+        st.session_state.features_extractor.dt = 1.0 / fps
+
+        # Extract features
+        with st.spinner("Extracting biomechanical features..."):
+            left_hand_path = np.array(video_data["left_hand_path"]) if video_data["left_hand_path"] else None
+            right_hand_path = np.array(video_data["right_hand_path"]) if video_data["right_hand_path"] else None
+            angles_over_time = {k: np.array(v) for k, v in video_data["angles"].items()}
+
+            features = st.session_state.features_extractor.extract_all_features(
+                video_data["pose_sequence"],
+                left_hand_path,
+                right_hand_path,
+                angles_over_time,
+            )
+
+        # Display features
+        st.subheader(f"Extracted Features for: {selected_video}")
+
+        # Group features by category
+        temporal_features = {k: v for k, v in features.items() if any(x in k for x in ["stroke_rate", "cycle", "tempo", "num_strokes"])}
+        kinematic_features = {k: v for k, v in features.items() if any(x in k for x in ["velocity", "acceleration", "path", "displacement", "efficiency"])}
+        angular_features = {k: v for k, v in features.items() if any(x in k for x in ["elbow", "shoulder"]) and not any(x in k for x in ["drop", "extreme", "asymmetry"])}
+        symmetry_features = {k: v for k, v in features.items() if "asymmetry" in k}
+        injury_features = {k: v for k, v in features.items() if any(x in k for x in ["extreme", "drop", "risk", "workload"])}
+
+        # Temporal Features
+        if temporal_features:
+            st.markdown("### ⏱️ Temporal Features")
+            cols = st.columns(min(len(temporal_features), 4))
+            for idx, (key, value) in enumerate(temporal_features.items()):
+                with cols[idx % 4]:
+                    st.metric(key.replace("_", " ").title(), f"{value:.2f}")
+
+        st.markdown("---")
+
+        # Kinematic Features
+        if kinematic_features:
+            st.markdown("### 🚀 Kinematic Features")
+            df_data = []
+            for key, value in kinematic_features.items():
+                df_data.append({"Feature": key.replace("_", " ").title(), "Value": f"{value:.2f}"})
+            st.dataframe(df_data, use_container_width=True, hide_index=True)
+
+        st.markdown("---")
+
+        # Angular Features
+        if angular_features:
+            st.markdown("### 📐 Angular Features")
+            df_data = []
+            for key, value in angular_features.items():
+                df_data.append({"Feature": key.replace("_", " ").title(), "Value": f"{value:.2f}°"})
+            st.dataframe(df_data, use_container_width=True, hide_index=True)
+
+        st.markdown("---")
+
+        # Symmetry Features
+        if symmetry_features:
+            st.markdown("### ⚖️ Symmetry Features")
+            cols = st.columns(min(len(symmetry_features), 3))
+            for idx, (key, value) in enumerate(symmetry_features.items()):
+                with cols[idx % 3]:
+                    # Add color coding based on asymmetry level
+                    if value < 10:
+                        st.metric(key.replace("_", " ").title(), f"{value:.2f}%", delta="Good", delta_color="normal")
+                    elif value < 20:
+                        st.metric(key.replace("_", " ").title(), f"{value:.2f}%", delta="Warning", delta_color="off")
+                    else:
+                        st.metric(key.replace("_", " ").title(), f"{value:.2f}%", delta="High", delta_color="inverse")
+
+        st.markdown("---")
+
+        # Injury Risk Features
+        if injury_features:
+            st.markdown("### ⚠️ Injury Risk Indicators")
+            df_data = []
+            for key, value in injury_features.items():
+                df_data.append({"Indicator": key.replace("_", " ").title(), "Value": f"{value:.2f}"})
+            st.dataframe(df_data, use_container_width=True, hide_index=True)
+
+        # Feature export
+        st.markdown("---")
+        st.subheader("💾 Export Features")
+
+        import json
+        features_json = json.dumps(features, indent=2)
+
+        col1, col2 = st.columns(2)
+        with col1:
+            st.download_button(
+                label="Download Features (JSON)",
+                data=features_json,
+                file_name=f"{selected_video}_features.json",
+                mime="application/json",
+            )
+
+elif mode == "Symmetry Analysis":
+    st.header("⚖️ Symmetry Analysis")
+
+    if len(st.session_state.analyzed_videos) == 0:
+        st.info("Please upload and analyze a video first using 'Upload Video' mode.")
+    else:
+        selected_video = st.selectbox(
+            "Select Video to Analyze",
+            options=list(st.session_state.analyzed_videos.keys()),
+        )
+
+        video_data = st.session_state.analyzed_videos[selected_video]
+
+        # Update FPS for analyzers
+        fps = video_data.get("fps", 30.0)
+        st.session_state.symmetry_analyzer.fps = fps
+        st.session_state.symmetry_analyzer.dt = 1.0 / fps
+
+        # Perform symmetry analysis
+        with st.spinner("Analyzing symmetry..."):
+            left_hand_path = np.array(video_data["left_hand_path"]) if video_data["left_hand_path"] else None
+            right_hand_path = np.array(video_data["right_hand_path"]) if video_data["right_hand_path"] else None
+            angles_over_time = {k: np.array(v) for k, v in video_data["angles"].items()}
+
+            symmetry_results = st.session_state.symmetry_analyzer.comprehensive_symmetry_analysis(
+                left_hand_path,
+                right_hand_path,
+                angles_over_time,
+            )
+
+        # Display overall score
+        st.subheader(f"Symmetry Analysis: {selected_video}")
+
+        overall_score = symmetry_results["overall_symmetry_score"]
+        interpretation = symmetry_results["interpretation"]
+
+        col1, col2 = st.columns([2, 1])
+
+        with col1:
+            st.metric("Overall Symmetry Score", f"{overall_score:.1f}/100")
+
+        with col2:
+            if overall_score >= 90:
+                st.success("🌟 Excellent!")
+            elif overall_score >= 75:
+                st.info("👍 Good")
+            elif overall_score >= 60:
+                st.warning("⚠️ Needs Work")
+            else:
+                st.error("❌ Poor Symmetry")
+
+        st.markdown(f"**{interpretation}**")
+
+        st.markdown("---")
+
+        # Arm Symmetry
+        st.subheader("💪 Arm Symmetry")
+        arm_symmetry = symmetry_results["arm_symmetry"]
+
+        col1, col2, col3 = st.columns(3)
+
+        with col1:
+            if "path_length_asymmetry_pct" in arm_symmetry:
+                st.metric("Path Length Asymmetry", f"{arm_symmetry['path_length_asymmetry_pct']:.1f}%")
+            if "left_path_length" in arm_symmetry:
+                st.metric("Left Path Length", f"{arm_symmetry['left_path_length']:.1f} px")
+
+        with col2:
+            if "speed_asymmetry_pct" in arm_symmetry:
+                st.metric("Speed Asymmetry", f"{arm_symmetry['speed_asymmetry_pct']:.1f}%")
+            if "right_path_length" in arm_symmetry:
+                st.metric("Right Path Length", f"{arm_symmetry['right_path_length']:.1f} px")
+
+        with col3:
+            if "elbow_angle_asymmetry_mean" in arm_symmetry:
+                st.metric("Elbow Angle Asymmetry", f"{arm_symmetry['elbow_angle_asymmetry_mean']:.1f}°")
+
+        # Speed comparison chart
+        if "left_mean_speed" in arm_symmetry and "right_mean_speed" in arm_symmetry:
+            fig = go.Figure(data=[
+                go.Bar(
+                    x=["Left Arm", "Right Arm"],
+                    y=[arm_symmetry["left_mean_speed"], arm_symmetry["right_mean_speed"]],
+                    marker_color=["blue", "red"],
+                )
+            ])
+            fig.update_layout(
+                title="Mean Speed Comparison",
+                yaxis_title="Speed (pixels/frame)",
+                height=300,
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+        st.markdown("---")
+
+        # Temporal Symmetry
+        st.subheader("⏱️ Temporal Symmetry")
+        temporal_symmetry = symmetry_results["temporal_symmetry"]
+
+        col1, col2, col3 = st.columns(3)
+
+        with col1:
+            if "left_num_strokes" in temporal_symmetry:
+                st.metric("Left Strokes", f"{int(temporal_symmetry['left_num_strokes'])}")
+            if "left_stroke_consistency" in temporal_symmetry:
+                st.metric("Left Consistency", f"{temporal_symmetry['left_stroke_consistency']:.2f}")
+
+        with col2:
+            if "right_num_strokes" in temporal_symmetry:
+                st.metric("Right Strokes", f"{int(temporal_symmetry['right_num_strokes'])}")
+            if "right_stroke_consistency" in temporal_symmetry:
+                st.metric("Right Consistency", f"{temporal_symmetry['right_stroke_consistency']:.2f}")
+
+        with col3:
+            if "stroke_count_asymmetry_pct" in temporal_symmetry:
+                st.metric("Stroke Count Asymmetry", f"{temporal_symmetry['stroke_count_asymmetry_pct']:.1f}%")
+
+        st.markdown("---")
+
+        # Force Imbalance
+        st.subheader("⚡ Force Imbalance Estimate")
+        force_imbalance = symmetry_results["force_imbalance"]
+
+        col1, col2, col3 = st.columns(3)
+
+        with col1:
+            if "left_mean_acceleration" in force_imbalance:
+                st.metric("Left Mean Acceleration", f"{force_imbalance['left_mean_acceleration']:.2f}")
+
+        with col2:
+            if "right_mean_acceleration" in force_imbalance:
+                st.metric("Right Mean Acceleration", f"{force_imbalance['right_mean_acceleration']:.2f}")
+
+        with col3:
+            if "force_imbalance_pct" in force_imbalance:
+                st.metric("Force Imbalance", f"{force_imbalance['force_imbalance_pct']:.1f}%")
+
+        st.markdown("---")
+
+        # Recommendations
+        st.subheader("💡 Recommendations")
+        recommendations = symmetry_results["recommendations"]
+
+        for i, rec in enumerate(recommendations, 1):
+            st.markdown(f"**{i}.** {rec}")
 
 
 def process_video(
@@ -1109,8 +1372,8 @@ st.markdown("---")
 st.markdown(
     """
     <div style='text-align: center'>
-        <p>SwimVision Pro v0.2.0 - Phase 2: Time-Series Analysis</p>
-        <p>Built with Streamlit • YOLO11 • OpenCV • DTW • Fréchet Distance</p>
+        <p>SwimVision Pro v0.3.0 - Phase 3: Biomechanical Feature Extraction</p>
+        <p>Built with Streamlit • YOLO11 • OpenCV • DTW • Kalman Filtering • Symmetry Analysis</p>
     </div>
     """,
     unsafe_allow_html=True,
