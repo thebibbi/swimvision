@@ -558,12 +558,49 @@ with st.sidebar:
     # Pose estimation settings
     st.subheader("Pose Estimation")
 
-    model_name = st.selectbox(
-        "YOLO Model",
-        ["yolo11n-pose.pt", "yolo11s-pose.pt", "yolo11m-pose.pt"],
+    pose_model_type = st.selectbox(
+        "Pose Model",
+        ["YOLO11", "MediaPipe", "OpenPose", "AlphaPose", "SMPL-X", "Multi-Model Fusion"],
         index=0,
-        help="Larger models are more accurate but slower",
+        help="Select pose estimation model",
     )
+
+    # Model-specific options
+    if pose_model_type == "YOLO11":
+        model_variant = st.selectbox(
+            "YOLO Variant",
+            ["yolo11n-pose.pt", "yolo11s-pose.pt", "yolo11m-pose.pt"],
+            index=0,
+            help="Larger models are more accurate but slower",
+        )
+    elif pose_model_type == "MediaPipe":
+        model_variant = st.selectbox(
+            "MediaPipe Complexity",
+            ["Lite (0)", "Full (1)", "Heavy (2)"],
+            index=1,
+            help="Model complexity level",
+        )
+    elif pose_model_type == "AlphaPose":
+        model_variant = st.selectbox(
+            "AlphaPose Model",
+            ["halpe26", "coco", "coco_wholebody"],
+            index=0,
+            help="AlphaPose model variant",
+        )
+    elif pose_model_type == "Multi-Model Fusion":
+        fusion_method = st.selectbox(
+            "Fusion Method",
+            ["Weighted Average", "Median", "Max Confidence", "Kalman Fusion"],
+            help="Method for fusing predictions",
+        )
+        st.multiselect(
+            "Models to Fuse",
+            ["YOLO11", "MediaPipe", "OpenPose"],
+            default=["YOLO11", "MediaPipe"],
+            help="Select models to combine",
+        )
+    else:
+        model_variant = None
 
     device = st.selectbox(
         "Device",
@@ -580,6 +617,31 @@ with st.sidebar:
         step=0.05,
         help="Minimum confidence for pose detection",
     )
+
+    # Advanced Features
+    with st.expander("🚀 Advanced Features"):
+        enable_water_surface = st.checkbox(
+            "Water Surface Detection",
+            value=False,
+            help="Detect water surface for entry/exit events",
+        )
+
+        enable_adaptive_tuning = st.checkbox(
+            "Adaptive Threshold Tuning",
+            value=False,
+            help="Auto-tune thresholds based on conditions",
+        )
+
+        if enable_water_surface:
+            water_detection_method = st.selectbox(
+                "Surface Detection Method",
+                ["Edge Detection", "Color Segmentation", "Hybrid"],
+                index=2,
+                help="Method for detecting water surface",
+            )
+
+        st.session_state.enable_water_surface = enable_water_surface
+        st.session_state.enable_adaptive_tuning = enable_adaptive_tuning
 
     st.markdown("---")
 
@@ -640,14 +702,94 @@ with st.sidebar:
 
     # Model initialization
     if st.button("Initialize/Reload Model", type="primary"):
-        with st.spinner("Loading YOLO model..."):
+        with st.spinner(f"Loading {pose_model_type} model..."):
             try:
-                st.session_state.pose_estimator = YOLOPoseEstimator(
-                    model_name=model_name,
-                    device=device,
-                    confidence=confidence_threshold,
-                )
-                st.success("Model loaded successfully!")
+                if pose_model_type == "YOLO11":
+                    from src.pose.yolo_estimator import YOLOPoseEstimator
+                    st.session_state.pose_estimator = YOLOPoseEstimator(
+                        model_name=model_variant,
+                        device=device,
+                        confidence=confidence_threshold,
+                    )
+
+                elif pose_model_type == "MediaPipe":
+                    from src.pose.mediapipe_estimator import MediaPipeEstimator
+                    complexity_map = {"Lite (0)": 0, "Full (1)": 1, "Heavy (2)": 2}
+                    complexity = complexity_map[model_variant]
+                    st.session_state.pose_estimator = MediaPipeEstimator(
+                        model_complexity=complexity,
+                        min_detection_confidence=confidence_threshold,
+                        device=device,
+                    )
+
+                elif pose_model_type == "OpenPose":
+                    from src.pose.openpose_estimator import OpenPoseEstimator
+                    st.session_state.pose_estimator = OpenPoseEstimator(
+                        device=device,
+                        confidence=confidence_threshold,
+                    )
+
+                elif pose_model_type == "AlphaPose":
+                    from src.pose.alphapose_estimator import AlphaPoseEstimator
+                    st.session_state.pose_estimator = AlphaPoseEstimator(
+                        model_name=model_variant,
+                        device=device,
+                        confidence=confidence_threshold,
+                    )
+
+                elif pose_model_type == "SMPL-X":
+                    from src.pose.smpl_estimator import SMPLEstimator
+                    st.session_state.pose_estimator = SMPLEstimator(
+                        model_type="smplx",
+                        device=device,
+                        confidence=confidence_threshold,
+                    )
+
+                elif pose_model_type == "Multi-Model Fusion":
+                    from src.pose.model_fusion import MultiModelFusion, FusionMethod
+                    from src.pose.yolo_estimator import YOLOPoseEstimator
+                    from src.pose.mediapipe_estimator import MediaPipeEstimator
+
+                    # Create individual models
+                    models = []
+                    models.append(YOLOPoseEstimator("yolo11n-pose.pt", device, confidence_threshold))
+                    models.append(MediaPipeEstimator(1, confidence_threshold, device))
+
+                    # Map fusion method
+                    method_map = {
+                        "Weighted Average": FusionMethod.WEIGHTED_AVERAGE,
+                        "Median": FusionMethod.MEDIAN,
+                        "Max Confidence": FusionMethod.MAX_CONFIDENCE,
+                        "Kalman Fusion": FusionMethod.KALMAN_FUSION,
+                    }
+
+                    st.session_state.pose_estimator = MultiModelFusion(
+                        models=models,
+                        fusion_method=method_map[fusion_method],
+                        confidence_threshold=confidence_threshold,
+                    )
+
+                st.success(f"{pose_model_type} model loaded successfully!")
+
+                # Initialize water surface detector if enabled
+                if st.session_state.get('enable_water_surface', False):
+                    from src.analysis.water_surface_detector import WaterSurfaceDetector
+                    method_map = {
+                        "Edge Detection": "edge",
+                        "Color Segmentation": "color",
+                        "Hybrid": "hybrid",
+                    }
+                    st.session_state.water_surface_detector = WaterSurfaceDetector(
+                        detection_method=method_map.get(water_detection_method, "hybrid"),
+                    )
+
+                # Initialize adaptive tuner if enabled
+                if st.session_state.get('enable_adaptive_tuning', False):
+                    from src.utils.adaptive_tuning import AdaptiveThresholdTuner
+                    st.session_state.adaptive_tuner = AdaptiveThresholdTuner(auto_tune=True)
+
+            except ImportError as e:
+                st.error(f"Model not available. Please install required dependencies: {e}")
             except Exception as e:
                 st.error(f"Failed to load model: {e}")
 
