@@ -47,6 +47,20 @@ SwimVision Pro combines cutting-edge AI and computer vision to help swimmers and
   - Interpolation-based trajectory completion
   - Hybrid (combines Kalman + phase awareness)
 
+### Advanced Pose Estimation (Latest) ✅
+- ✅ **Multi-Model Support** - Choose from 6 pose estimation models:
+  - YOLO11-Pose (nano, small, medium variants)
+  - MediaPipe (33 landmarks, 3D support)
+  - OpenPose (multi-person, hand/face detection)
+  - AlphaPose (halpe26, coco, wholebody - up to 133 keypoints)
+  - SMPL/SMPL-X (3D body mesh, parametric models)
+  - Multi-Model Fusion (combine multiple models)
+- ✅ **Model Fusion** - 4 fusion methods (weighted average, median, max confidence, Kalman)
+- ✅ **Multi-Camera Fusion** - Triangulation, 3D reconstruction, epipolar validation
+- ✅ **Water Surface Detection** - Entry/exit event tracking, edge/color/hybrid methods
+- ✅ **Adaptive Tuning** - Auto-adjust thresholds based on pool conditions
+- ✅ **Model Comparison** - Benchmark speed, accuracy, robustness
+
 ### Phase 4: Injury Prediction (Week 4) ⏳
 - ⏳ CatBoost/XGBoost models for injury risk prediction
 - ⏳ Rule-based safety checks (shoulder angles, asymmetry, fatigue)
