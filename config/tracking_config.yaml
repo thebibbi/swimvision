@@ -1,0 +1,81 @@
+# Tracking Configuration for SwimVision Pro
+# Settings for occlusion handling and hand tracking
+
+# Tracking method selection
+# Options: kalman, kalman_predict, phase_aware, interpolation, hybrid
+tracking_method: hybrid
+
+# Occlusion detection settings
+occlusion_detection:
+  # Confidence thresholds
+  confidence_high: 0.5    # Above this = visible
+  confidence_low: 0.3     # Below this = occluded
+
+  # Temporal smoothing
+  min_frames: 3           # Frames needed to confirm state change
+
+  # Use stroke phase for occlusion detection
+  use_phase: true
+
+  # Underwater phases (hands typically occluded)
+  underwater_phases:
+    - catch
+    - pull
+    - push
+
+  # Visible phases (hands above water)
+  visible_phases:
+    - entry
+    - recovery
+
+# Kalman filter settings
+kalman:
+  process_variance: 0.0001     # Trust model (lower = trust more)
+  measurement_variance: 0.1    # Trust measurements (lower = trust more)
+
+  # Prediction during occlusion
+  max_prediction_frames: 30    # Max frames to predict without measurement
+  confidence_decay: 0.95       # Confidence decay per frame during prediction
+
+# Phase-aware tracking
+phase_aware:
+  enabled: true
+  use_templates: false           # Use pre-recorded ideal trajectories
+  template_path: "models/phase_templates/"
+
+  # Expected velocity bounds for each phase (in pixels/frame)
+  velocity_bounds:
+    entry: { x: [-5, 5], y: [0, 15] }
+    catch: { x: [-10, 5], y: [0, 10] }
+    pull: { x: [-15, 0], y: [-5, 10] }
+    push: { x: [-15, 0], y: [-10, 5] }
+    recovery: { x: [0, 20], y: [-15, 0] }
+
+# Interpolation settings
+interpolation:
+  method: cubic              # linear, cubic, or spline
+  min_segment_length: 5      # Min frames for interpolation
+  max_segment_length: 60     # Max frames to interpolate
+
+# Hybrid method weights
+hybrid:
+  kalman_weight: 0.7          # Weight for Kalman prediction
+  phase_weight: 0.3           # Weight for phase constraints
+
+# Visualization settings
+visualization:
+  show_predicted: true         # Show predicted positions
+  show_confidence: true        # Show confidence values
+  predicted_color: [255, 165, 0]  # Orange for predicted
+  observed_color: [0, 255, 0]     # Green for observed
+  occluded_color: [255, 0, 0]     # Red for occluded
+
+  # Trajectory trail
+  show_trail: true
+  trail_length: 30             # Frames
+  trail_thickness: 2
+
+# Performance settings
+performance:
+  enable_caching: true          # Cache tracking results
+  parallel_processing: false    # Process left/right hands in parallel
