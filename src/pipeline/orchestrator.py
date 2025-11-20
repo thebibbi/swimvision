@@ -33,6 +33,9 @@ from src.tracking.bytetrack_tracker import ByteTrackTracker, Detection
 # Import format converters
 from src.utils.format_converters import FormatConverter
 
+# Import device utilities
+from src.utils.device_utils import get_optimal_device
+
 # Import multi-model fusion (from existing codebase)
 try:
     from src.pose.multi_model_fusion import MultiModelFusion
@@ -80,7 +83,7 @@ class PipelineConfig:
     show_skeleton: bool = True
 
     # Performance
-    device: str = "cuda"  # cuda or cpu
+    device: str = "auto"  # cuda, mps, cpu, or auto for auto-detection
     batch_size: int = 1
 
     # Output
@@ -146,6 +149,13 @@ class SwimVisionPipeline:
             config: Pipeline configuration
         """
         self.config = config
+
+        # Resolve device (auto-detect if needed)
+        if config.device == 'auto':
+            self.config.device = get_optimal_device()
+        else:
+            self.config.device = get_optimal_device(preferred=config.device)
+
         self.model_registry = ModelRegistry()
 
         # Initialize components

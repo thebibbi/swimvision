@@ -20,6 +20,7 @@ from src.pose.base_estimator import (
     KeypointFormat,
     PoseModel,
 )
+from src.utils.device_utils import get_optimal_device
 
 try:
     from mmpose.apis import init_model, inference_topdown
@@ -62,7 +63,7 @@ class RTMPoseEstimator(BasePoseEstimator):
         model_variant: str = 'rtmpose-m',
         config_path: Optional[str] = None,
         checkpoint_path: Optional[str] = None,
-        device: str = 'cuda',
+        device: str = 'auto',
         confidence: float = 0.5,
         models_dir: str = 'models/rtmpose',
     ):
@@ -72,10 +73,16 @@ class RTMPoseEstimator(BasePoseEstimator):
             model_variant: Model variant (rtmpose-t/s/m/l)
             config_path: Path to config file (auto-resolved if None)
             checkpoint_path: Path to checkpoint (auto-resolved if None)
-            device: Device to run on ('cuda', 'cpu')
+            device: Device to run on ('cuda', 'mps', 'cpu', or 'auto' for auto-detection)
             confidence: Confidence threshold for keypoints
             models_dir: Directory containing model files
         """
+        # Auto-detect optimal device if not specified
+        if device == 'auto':
+            device = get_optimal_device()
+        else:
+            device = get_optimal_device(preferred=device)
+
         super().__init__(f"rtmpose-{model_variant}", device, confidence)
 
         if not MMPOSE_AVAILABLE:

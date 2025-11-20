@@ -269,9 +269,9 @@ def main():
     parser.add_argument(
         "--device",
         type=str,
-        default="cuda",
-        choices=["cuda", "cpu"],
-        help="Device to use (cuda or cpu)"
+        default="auto",
+        choices=["auto", "cuda", "mps", "cpu"],
+        help="Device to use (auto for auto-detection, cuda for NVIDIA GPU, mps for Apple Silicon, cpu for CPU)"
     )
     parser.add_argument(
         "--no-tracking",
