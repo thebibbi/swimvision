@@ -61,6 +61,40 @@ SwimVision Pro combines cutting-edge AI and computer vision to help swimmers and
 - ✅ **Adaptive Tuning** - Auto-adjust thresholds based on pool conditions
 - ✅ **Model Comparison** - Benchmark speed, accuracy, robustness
 
+### 🚀 Phase 1 Advanced Features (NEW!) ✅
+**Real-time pose estimation + tracking pipeline with cross-platform GPU acceleration**
+
+- ✅ **RTMPose Integration** - High-performance SOTA pose estimation (60-90 FPS)
+  - 4 model variants (rtmpose-t/s/m/l) for speed/accuracy tradeoffs
+  - MMPose framework with auto-download models
+  - Multi-person detection with COCO-17 keypoints
+
+- ✅ **ByteTrack Multi-Swimmer Tracking** - State-of-the-art tracking
+  - Unique track IDs maintained across frames
+  - Kalman filtering for smooth trajectories
+  - Handles occlusions and missed detections
+  - 30-frame trajectory history
+
+- ✅ **Format Conversion System** - Seamless keypoint format conversion
+  - COCO-17 ↔ SMPL-24 bidirectional conversion
+  - SMPL-24 → OpenSim markers (35+ anatomical markers)
+  - MediaPipe-33 → COCO-17 conversion
+  - Ready for biomechanics integration
+
+- ✅ **Cross-Platform GPU Acceleration**
+  - **NVIDIA GPUs**: CUDA support (52-85 FPS @ 1080p)
+  - **Apple Silicon**: M1/M2/M3 with MPS backend (20-35 FPS @ 1080p)
+  - **CPU**: Universal fallback (8-10 FPS @ 1080p)
+  - Intelligent auto-detection with device preferences
+
+- ✅ **Unified Pipeline Orchestrator** - Single interface for all components
+  - Configurable processing modes (realtime/balanced/accuracy)
+  - Real-time visualization with tracking IDs
+  - Video file and webcam support
+  - Performance monitoring and statistics
+
+**See:** [Phase 1 Guide](docs/PHASE1_GUIDE.md) | [Apple Silicon Guide](docs/APPLE_SILICON_GUIDE.md)
+
 ### Phase 4: Injury Prediction (Week 4) ⏳
 - ⏳ CatBoost/XGBoost models for injury risk prediction
 - ⏳ Rule-based safety checks (shoulder angles, asymmetry, fatigue)
@@ -133,28 +167,46 @@ SwimVision Pro combines cutting-edge AI and computer vision to help swimmers and
 
 ### Prerequisites
 
-- **Python 3.10+**
-- **CUDA 11.8+** (optional, for GPU acceleration)
-- **16GB+ RAM** (8GB minimum)
-- **4GB+ VRAM** (for GPU inference with YOLO11)
-- **Webcam or video files** (Intel RealSense D455 optional)
+- **Python 3.9+** (3.10+ recommended)
+- **GPU** (optional but recommended):
+  - NVIDIA GPU with CUDA 11.8+ (52-85 FPS @ 1080p)
+  - Apple Silicon M1/M2/M3 with macOS 12.3+ (20-35 FPS @ 1080p)
+- **16GB+ RAM** (32GB+ for larger models)
+- **Webcam or video files**
 
 ### Installation
 
-#### Option 1: Automated Setup Script (Recommended)
+#### 🎯 One-Command Setup (Recommended)
+
+The master setup script automatically detects your system and runs the optimal installation:
 
 ```bash
 # Clone the repository
 git clone https://github.com/thebibbi/swimvision.git
 cd swimvision
 
-# Run setup script
-# On macOS/Linux:
-bash scripts/setup.sh
+# Run master setup script (auto-detects CUDA/MPS/CPU)
+bash setup.sh
 
-# On Windows:
-scripts\setup.bat
+# Or with options:
+bash setup.sh --auto      # Non-interactive mode
+bash setup.sh --demo      # Setup + run demo
+bash setup.sh --test      # Setup + run tests
 ```
+
+**What it does:**
+- ✅ Detects your hardware (NVIDIA GPU, Apple Silicon, or CPU)
+- ✅ Installs the right version of PyTorch (CUDA/MPS/CPU)
+- ✅ Sets up MMPose + ByteTrack + all dependencies
+- ✅ Downloads RTMPose models (~100MB)
+- ✅ Verifies everything works
+- ✅ Shows you next steps
+
+**Supported platforms:**
+- 🐧 Linux with NVIDIA GPU (CUDA)
+- 🍎 macOS with Apple Silicon (MPS)
+- 🪟 Windows with NVIDIA GPU (CUDA)
+- 💻 Any platform (CPU fallback)
 
 #### Option 2: Manual Installation
 
@@ -230,10 +282,42 @@ make docker-down    # Stop containers
 make docker-logs    # View logs
 ```
 
-### Run the Application
+### 🎬 Quick Test - Phase 1 Pipeline
+
+After setup, test the new advanced pipeline:
 
 ```bash
-# Start Streamlit app
+# Activate environment
+source venv_advanced/bin/activate
+
+# Create test video
+python demos/demo_phase1_pipeline.py --create-test-video
+
+# Run pipeline demo (auto-detects best device)
+python demos/demo_phase1_pipeline.py --video data/videos/test_swimmers.mp4
+
+# Or use your own video
+python demos/demo_phase1_pipeline.py --video YOUR_VIDEO.mp4 --output results/output.mp4
+
+# Webcam demo
+python demos/demo_phase1_pipeline.py --webcam
+
+# Specify device explicitly
+python demos/demo_phase1_pipeline.py --video input.mp4 --device cuda    # NVIDIA GPU
+python demos/demo_phase1_pipeline.py --video input.mp4 --device mps     # Apple Silicon
+python demos/demo_phase1_pipeline.py --video input.mp4 --device cpu     # CPU only
+```
+
+**Features you'll see:**
+- ✅ Real-time pose estimation with skeleton overlay
+- ✅ Multi-swimmer tracking with unique IDs
+- ✅ FPS counter and performance stats
+- ✅ Trajectory history visualization
+
+### Run the Streamlit Application
+
+```bash
+# Start Streamlit app (original UI)
 streamlit run app.py
 
 # App will open at http://localhost:8501
@@ -241,10 +325,11 @@ streamlit run app.py
 
 ### First-Time Setup
 
-1. **Test webcam access** - Go to "Live Camera" mode
-2. **Upload a test video** - Try "Upload Video" mode with sample swimming video
-3. **Check pose estimation** - Verify skeleton overlay appears
-4. **Review settings** - Adjust confidence thresholds in sidebar
+1. **Test Phase 1 Pipeline** - Run the demo above to verify GPU acceleration
+2. **Test webcam access** - Go to "Live Camera" mode in Streamlit
+3. **Upload a test video** - Try "Upload Video" mode with sample swimming video
+4. **Check pose estimation** - Verify skeleton overlay appears
+5. **Review settings** - Adjust confidence thresholds in sidebar
 
 ---
 
