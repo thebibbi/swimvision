@@ -85,10 +85,10 @@ echo -e "${GREEN}✅ Tools upgraded${NC}\n"
 
 # Install PyTorch with MPS support
 echo -e "${BLUE}[5/8] Installing PyTorch with MPS support...${NC}"
-echo -e "${YELLOW}ℹ️  Using PyTorch 2.1.0 with Apple Silicon MPS backend${NC}"
+echo -e "${YELLOW}ℹ️  Using PyTorch 2.5.1 (Python 3.12 compatible) with Apple Silicon MPS backend${NC}"
 
 # For Apple Silicon, we use the default PyTorch which has MPS support
-pip install torch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0
+pip install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1
 
 echo -e "${GREEN}✅ PyTorch installed${NC}\n"
 
@@ -115,22 +115,38 @@ echo ""
 # Install MMPose ecosystem
 echo -e "${BLUE}[7/8] Installing MMPose ecosystem...${NC}"
 pip install -U openmim
+
+# openmim pulls in openxlab which downgrades setuptools to 60.x, but
+# Python 3.12's pkg_resources requires a modern release. Re-upgrade
+# setuptools BEFORE invoking mim (which imports setuptools).
+pip install --no-deps --upgrade "setuptools>=75.0"
+
+# xtcocotools (mmpose dependency) has a broken source dist. Use pycocotools instead,
+# which is API-compatible and has working wheels for Apple Silicon.
+pip install "pycocotools>=2.0.6"
+
 mim install mmengine
 mim install "mmcv>=2.0.0"
-mim install "mmpose>=1.2.0"
 
-echo -e "${GREEN}✅ MMPose ecosystem installed${NC}\n"
+# Install mmpose without dependencies first, then install remaining deps manually
+# This avoids the broken xtcocotools dependency
+pip install --no-deps mmpose
+pip install chumpy json-tricks munkres scipy
+echo -e "${GREEN}✅ MMPose installed${NC}\n"
 
 # Install core requirements
 echo -e "${BLUE}[8/8] Installing core requirements...${NC}"
 
-# Install from requirements_advanced.txt but skip CUDA-specific packages
-cat requirements_advanced.txt | grep -v "cupy" | grep -v "onnxruntime-gpu" > requirements_macos.txt
+# Install from requirements_advanced.txt but skip CUDA-specific packages and packages with build issues on Apple Silicon
+cat requirements_advanced.txt | grep -v "cupy" | grep -v "onnxruntime-gpu" | grep -v "decord" | grep -v "onnxsim" | grep -v "tf2onnx" > requirements_macos.txt
 
 # Add onnxruntime (CPU version for macOS)
 echo "onnxruntime>=1.16.0" >> requirements_macos.txt
 
 pip install -r requirements_macos.txt
+
+# Install time-series analysis dependencies required by DTW analyzer
+pip install "dtaidistance>=2.3.12" "similaritymeasures>=1.1.0"
 
 # Install ByteTrack
 echo -e "${BLUE}Installing ByteTrack...${NC}"

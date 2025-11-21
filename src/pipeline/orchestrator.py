@@ -13,15 +13,15 @@ Author: SwimVision Pro Team
 Date: 2025-01-20
 """
 
-import cv2
-import numpy as np
-from typing import Dict, List, Optional, Any, Tuple, Union
-from pathlib import Path
+import logging
+import time
 from dataclasses import dataclass, field
 from enum import Enum
-import logging
-from collections import defaultdict
-import time
+from pathlib import Path
+from typing import Any
+
+import cv2
+import numpy as np
 
 # Import pose estimators
 from src.pose.model_registry import ModelRegistry
@@ -30,11 +30,11 @@ from src.pose.rtmpose_estimator import RTMPoseEstimator
 # Import tracking
 from src.tracking.bytetrack_tracker import ByteTrackTracker, Detection
 
-# Import format converters
-from src.utils.format_converters import FormatConverter
-
 # Import device utilities
 from src.utils.device_utils import get_optimal_device
+
+# Import format converters
+from src.utils.format_converters import FormatConverter
 
 # Import multi-model fusion (from existing codebase)
 try:
@@ -50,6 +50,7 @@ logger = logging.getLogger(__name__)
 
 class ProcessingMode(Enum):
     """Pipeline processing modes."""
+
     REALTIME = "realtime"  # Optimize for speed
     BALANCED = "balanced"  # Balance speed and accuracy
     ACCURACY = "accuracy"  # Optimize for accuracy
@@ -61,7 +62,7 @@ class PipelineConfig:
     """Configuration for SwimVision pipeline."""
 
     # Pose estimation
-    pose_models: List[str] = field(default_factory=lambda: ["rtmpose-m"])
+    pose_models: list[str] = field(default_factory=lambda: ["rtmpose-m"])
     use_fusion: bool = False  # Use multi-model fusion
 
     # Tracking
@@ -74,7 +75,7 @@ class PipelineConfig:
     mode: ProcessingMode = ProcessingMode.BALANCED
 
     # Format conversion
-    output_formats: List[str] = field(default_factory=lambda: ["coco17"])  # coco17, smpl24, opensim
+    output_formats: list[str] = field(default_factory=lambda: ["coco17"])  # coco17, smpl24, opensim
 
     # Visualization
     visualize: bool = True
@@ -88,7 +89,7 @@ class PipelineConfig:
 
     # Output
     save_results: bool = False
-    output_dir: Optional[Path] = None
+    output_dir: Path | None = None
 
     # Advanced features (placeholders for future phases)
     enable_underwater_preprocessing: bool = False
@@ -104,20 +105,20 @@ class FrameResult:
     timestamp: float
 
     # Raw pose detections (before tracking)
-    raw_poses: List[Dict[str, Any]]  # Each dict has 'keypoints', 'bbox', 'score'
+    raw_poses: list[dict[str, Any]]  # Each dict has 'keypoints', 'bbox', 'score'
 
     # Tracked swimmers
-    tracked_swimmers: List[Dict[str, Any]]  # Each dict has 'track_id', 'keypoints', 'bbox', etc.
+    tracked_swimmers: list[dict[str, Any]]  # Each dict has 'track_id', 'keypoints', 'bbox', etc.
 
     # Converted formats
-    converted_poses: Dict[str, Any]  # e.g., {'smpl24': [...], 'opensim': [...]}
+    converted_poses: dict[str, Any]  # e.g., {'smpl24': [...], 'opensim': [...]}
 
     # Performance metrics
     processing_time: float
     fps: float
 
     # Visualization
-    visualized_frame: Optional[np.ndarray] = None
+    visualized_frame: np.ndarray | None = None
 
 
 class SwimVisionPipeline:
@@ -151,7 +152,7 @@ class SwimVisionPipeline:
         self.config = config
 
         # Resolve device (auto-detect if needed)
-        if config.device == 'auto':
+        if config.device == "auto":
             self.config.device = get_optimal_device()
         else:
             self.config.device = get_optimal_device(preferred=config.device)
@@ -168,13 +169,15 @@ class SwimVisionPipeline:
         self.start_time = time.time()
 
         # Results cache
-        self.results_history: List[FrameResult] = []
+        self.results_history: list[FrameResult] = []
 
-        logger.info(f"SwimVision Pipeline initialized with {len(self.pose_estimators)} pose estimator(s)")
+        logger.info(
+            f"SwimVision Pipeline initialized with {len(self.pose_estimators)} pose estimator(s)"
+        )
         logger.info(f"Tracking: {'Enabled' if self.tracker else 'Disabled'}")
         logger.info(f"Mode: {config.mode.value}")
 
-    def _init_pose_estimators(self) -> Dict[str, Any]:
+    def _init_pose_estimators(self) -> dict[str, Any]:
         """Initialize pose estimation models."""
         estimators = {}
 
@@ -184,17 +187,13 @@ class SwimVisionPipeline:
                     # Use RTMPose
                     variant = model_name.split("-")[1]  # e.g., "m" from "rtmpose-m"
                     estimators[model_name] = RTMPoseEstimator(
-                        variant=variant,
-                        device=self.config.device
+                        variant=variant, device=self.config.device
                     )
                     logger.info(f"Loaded {model_name}")
 
                 else:
                     # Use model registry for other models
-                    model = self.model_registry.load_model(
-                        model_name,
-                        device=self.config.device
-                    )
+                    model = self.model_registry.load_model(model_name, device=self.config.device)
                     estimators[model_name] = model
                     logger.info(f"Loaded {model_name}")
 
@@ -206,7 +205,7 @@ class SwimVisionPipeline:
 
         return estimators
 
-    def _init_tracker(self) -> Optional[ByteTrackTracker]:
+    def _init_tracker(self) -> ByteTrackTracker | None:
         """Initialize ByteTrack tracker."""
         if not self.config.enable_tracking:
             return None
@@ -215,7 +214,7 @@ class SwimVisionPipeline:
             tracker = ByteTrackTracker(
                 track_thresh=self.config.track_thresh,
                 match_thresh=self.config.match_thresh,
-                max_time_lost=self.config.max_time_lost
+                max_time_lost=self.config.max_time_lost,
             )
             logger.info("ByteTrack tracker initialized")
             return tracker
@@ -223,7 +222,7 @@ class SwimVisionPipeline:
             logger.error(f"Failed to initialize tracker: {e}")
             return None
 
-    def _init_fusion(self) -> Optional[Any]:
+    def _init_fusion(self) -> Any | None:
         """Initialize multi-model fusion."""
         if not self.config.use_fusion or MultiModelFusion is None:
             return None
@@ -237,11 +236,7 @@ class SwimVisionPipeline:
             logger.error(f"Failed to initialize fusion: {e}")
             return None
 
-    def process_frame(
-        self,
-        frame: np.ndarray,
-        frame_id: Optional[int] = None
-    ) -> FrameResult:
+    def process_frame(self, frame: np.ndarray, frame_id: int | None = None) -> FrameResult:
         """
         Process a single frame through the pipeline.
 
@@ -274,10 +269,7 @@ class SwimVisionPipeline:
         # Step 5: Visualization (if enabled)
         visualized_frame = None
         if self.config.visualize:
-            visualized_frame = self._visualize_results(
-                frame.copy(),
-                tracked_swimmers or raw_poses
-            )
+            visualized_frame = self._visualize_results(frame.copy(), tracked_swimmers or raw_poses)
 
         # Calculate performance metrics
         processing_time = time.time() - start_time
@@ -292,7 +284,7 @@ class SwimVisionPipeline:
             converted_poses=converted_poses,
             processing_time=processing_time,
             fps=fps,
-            visualized_frame=visualized_frame
+            visualized_frame=visualized_frame,
         )
 
         # Cache result
@@ -300,7 +292,7 @@ class SwimVisionPipeline:
 
         return result
 
-    def _estimate_poses(self, frame: np.ndarray) -> List[Dict[str, Any]]:
+    def _estimate_poses(self, frame: np.ndarray) -> list[dict[str, Any]]:
         """
         Run pose estimation on frame.
 
@@ -315,19 +307,19 @@ class SwimVisionPipeline:
                 result = estimator.estimate_pose(frame, return_image=False)
 
                 if result is not None:
-                    keypoints = result.get('keypoints', [])
-                    scores = result.get('scores', [])
-                    bboxes = result.get('bboxes', [])
+                    keypoints = result.get("keypoints", [])
+                    scores = result.get("scores", [])
+                    bboxes = result.get("bboxes", [])
 
                     # Convert to standard format
                     if len(keypoints) > 0:
                         for i, kpts in enumerate(keypoints):
                             pose = {
-                                'keypoints': kpts,
-                                'score': scores[i] if i < len(scores) else 0.0,
-                                'bbox': bboxes[i] if i < len(bboxes) else self._estimate_bbox(kpts),
-                                'model': model_name,
-                                'format': 'coco17'  # RTMPose uses COCO format
+                                "keypoints": kpts,
+                                "score": scores[i] if i < len(scores) else 0.0,
+                                "bbox": bboxes[i] if i < len(bboxes) else self._estimate_bbox(kpts),
+                                "model": model_name,
+                                "format": "coco17",  # RTMPose uses COCO format
                             }
                             all_poses.append(pose)
 
@@ -359,7 +351,7 @@ class SwimVisionPipeline:
 
         return np.array([x_min, y_min, x_max, y_max, score])
 
-    def _fuse_poses(self, poses: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _fuse_poses(self, poses: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Fuse poses from multiple models."""
         if not self.fusion or len(poses) <= 1:
             return poses
@@ -374,10 +366,8 @@ class SwimVisionPipeline:
             return poses
 
     def _track_swimmers(
-        self,
-        poses: List[Dict[str, Any]],
-        frame_id: int
-    ) -> Optional[List[Dict[str, Any]]]:
+        self, poses: list[dict[str, Any]], frame_id: int
+    ) -> list[dict[str, Any]] | None:
         """
         Track swimmers across frames.
 
@@ -391,15 +381,15 @@ class SwimVisionPipeline:
             # Convert poses to Detection format for ByteTrack
             detections = []
             for pose in poses:
-                bbox = pose['bbox']
-                score = pose['score']
-                keypoints = pose.get('keypoints')
+                bbox = pose["bbox"]
+                score = pose["score"]
+                keypoints = pose.get("keypoints")
 
                 det = Detection(
                     bbox=bbox[:4],
                     score=score,
                     class_id=0,  # All are swimmers
-                    keypoints=keypoints
+                    keypoints=keypoints,
                 )
                 detections.append(det)
 
@@ -410,14 +400,14 @@ class SwimVisionPipeline:
             tracked_poses = []
             for track in tracks:
                 tracked_pose = {
-                    'track_id': track.track_id,
-                    'bbox': track.bbox,
-                    'keypoints': track.keypoints,
-                    'score': track.score,
-                    'state': track.state.value,
-                    'trajectory': track.trajectory[-10:] if len(track.trajectory) > 0 else [],
-                    'velocity': track.get_velocity(),
-                    'format': 'coco17'
+                    "track_id": track.track_id,
+                    "bbox": track.bbox,
+                    "keypoints": track.keypoints,
+                    "score": track.score,
+                    "state": track.state.value,
+                    "trajectory": track.trajectory[-10:] if len(track.trajectory) > 0 else [],
+                    "velocity": track.get_velocity(),
+                    "format": "coco17",
                 }
                 tracked_poses.append(tracked_pose)
 
@@ -427,10 +417,7 @@ class SwimVisionPipeline:
             logger.error(f"Tracking failed: {e}")
             return None
 
-    def _convert_formats(
-        self,
-        poses: List[Dict[str, Any]]
-    ) -> Dict[str, List[Any]]:
+    def _convert_formats(self, poses: list[dict[str, Any]]) -> dict[str, list[Any]]:
         """
         Convert poses to requested output formats.
 
@@ -442,13 +429,13 @@ class SwimVisionPipeline:
         for output_format in self.config.output_formats:
             if output_format == "coco17":
                 # Already in COCO format
-                converted[output_format] = [p['keypoints'] for p in poses]
+                converted[output_format] = [p["keypoints"] for p in poses]
 
             elif output_format == "smpl24":
                 # Convert COCO-17 to SMPL-24
                 smpl_poses = []
                 for pose in poses:
-                    kpts_coco = pose['keypoints']
+                    kpts_coco = pose["keypoints"]
                     kpts_smpl = FormatConverter.coco17_to_smpl24(kpts_coco)
                     smpl_poses.append(kpts_smpl)
                 converted[output_format] = smpl_poses
@@ -457,7 +444,7 @@ class SwimVisionPipeline:
                 # Convert COCO-17 -> SMPL-24 -> OpenSim
                 opensim_poses = []
                 for pose in poses:
-                    kpts_coco = pose['keypoints']
+                    kpts_coco = pose["keypoints"]
                     kpts_smpl = FormatConverter.coco17_to_smpl24(kpts_coco)
                     markers = FormatConverter.smpl24_to_opensim_markers(kpts_smpl)
                     opensim_poses.append(markers)
@@ -465,11 +452,7 @@ class SwimVisionPipeline:
 
         return converted
 
-    def _visualize_results(
-        self,
-        frame: np.ndarray,
-        poses: List[Dict[str, Any]]
-    ) -> np.ndarray:
+    def _visualize_results(self, frame: np.ndarray, poses: list[dict[str, Any]]) -> np.ndarray:
         """
         Visualize poses and tracking on frame.
 
@@ -482,23 +465,41 @@ class SwimVisionPipeline:
         """
         # COCO-17 skeleton connections
         skeleton = [
-            (0, 1), (0, 2), (1, 3), (2, 4),  # Head
-            (5, 6), (5, 7), (7, 9), (6, 8), (8, 10),  # Arms
-            (5, 11), (6, 12), (11, 12),  # Torso
-            (11, 13), (13, 15), (12, 14), (14, 16)  # Legs
+            (0, 1),
+            (0, 2),
+            (1, 3),
+            (2, 4),  # Head
+            (5, 6),
+            (5, 7),
+            (7, 9),
+            (6, 8),
+            (8, 10),  # Arms
+            (5, 11),
+            (6, 12),
+            (11, 12),  # Torso
+            (11, 13),
+            (13, 15),
+            (12, 14),
+            (14, 16),  # Legs
         ]
 
         # Color palette for tracks
         colors = [
-            (255, 0, 0), (0, 255, 0), (0, 0, 255),
-            (255, 255, 0), (255, 0, 255), (0, 255, 255),
-            (128, 0, 128), (255, 128, 0), (0, 128, 255)
+            (255, 0, 0),
+            (0, 255, 0),
+            (0, 0, 255),
+            (255, 255, 0),
+            (255, 0, 255),
+            (0, 255, 255),
+            (128, 0, 128),
+            (255, 128, 0),
+            (0, 128, 255),
         ]
 
         for pose in poses:
-            keypoints = pose.get('keypoints')
-            track_id = pose.get('track_id')
-            bbox = pose.get('bbox')
+            keypoints = pose.get("keypoints")
+            track_id = pose.get("track_id")
+            bbox = pose.get("bbox")
 
             if keypoints is None:
                 continue
@@ -518,8 +519,7 @@ class SwimVisionPipeline:
                 if track_id is not None and self.config.show_tracking_ids:
                     label = f"ID: {track_id}"
                     cv2.putText(
-                        frame, label, (x1, y1 - 10),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2
+                        frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2
                     )
 
             # Draw skeleton
@@ -548,23 +548,19 @@ class SwimVisionPipeline:
             fps_text = f"FPS: {last_result.fps:.1f}"
             swimmers_text = f"Swimmers: {len(poses)}"
 
+            cv2.putText(frame, fps_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
             cv2.putText(
-                frame, fps_text, (10, 30),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2
-            )
-            cv2.putText(
-                frame, swimmers_text, (10, 60),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2
+                frame, swimmers_text, (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2
             )
 
         return frame
 
     def process_video(
         self,
-        video_path: Union[str, Path],
-        output_path: Optional[Union[str, Path]] = None,
-        show_preview: bool = True
-    ) -> List[FrameResult]:
+        video_path: str | Path,
+        output_path: str | Path | None = None,
+        show_preview: bool = True,
+    ) -> list[FrameResult]:
         """
         Process entire video file.
 
@@ -599,10 +595,8 @@ class SwimVisionPipeline:
         if output_path:
             output_path = Path(output_path)
             output_path.parent.mkdir(parents=True, exist_ok=True)
-            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-            writer = cv2.VideoWriter(
-                str(output_path), fourcc, fps, (width, height)
-            )
+            fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+            writer = cv2.VideoWriter(str(output_path), fourcc, fps, (width, height))
 
         # Process frames
         results = []
@@ -625,7 +619,7 @@ class SwimVisionPipeline:
                 # Show preview
                 if show_preview and result.visualized_frame is not None:
                     cv2.imshow("SwimVision Pipeline", result.visualized_frame)
-                    if cv2.waitKey(1) & 0xFF == ord('q'):
+                    if cv2.waitKey(1) & 0xFF == ord("q"):
                         logger.info("Preview stopped by user")
                         break
 
@@ -653,7 +647,7 @@ class SwimVisionPipeline:
 
         return results
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         """Get pipeline statistics."""
         if not self.results_history:
             return {}
@@ -663,14 +657,14 @@ class SwimVisionPipeline:
         swimmer_counts = [len(r.tracked_swimmers) for r in self.results_history]
 
         return {
-            'total_frames': len(self.results_history),
-            'avg_processing_time': np.mean(processing_times),
-            'avg_fps': np.mean(fps_values),
-            'max_fps': np.max(fps_values),
-            'min_fps': np.min(fps_values),
-            'avg_swimmers_per_frame': np.mean(swimmer_counts),
-            'max_swimmers': np.max(swimmer_counts) if swimmer_counts else 0,
-            'total_runtime': self.results_history[-1].timestamp if self.results_history else 0
+            "total_frames": len(self.results_history),
+            "avg_processing_time": np.mean(processing_times),
+            "avg_fps": np.mean(fps_values),
+            "max_fps": np.max(fps_values),
+            "min_fps": np.min(fps_values),
+            "avg_swimmers_per_frame": np.mean(swimmer_counts),
+            "max_swimmers": np.max(swimmer_counts) if swimmer_counts else 0,
+            "total_runtime": self.results_history[-1].timestamp if self.results_history else 0,
         }
 
     def reset(self):
@@ -695,7 +689,7 @@ def demo_pipeline():
         output_formats=["coco17", "smpl24"],
         visualize=True,
         show_tracking_ids=True,
-        device="cuda"
+        device="cuda",
     )
 
     # Initialize pipeline
@@ -707,16 +701,14 @@ def demo_pipeline():
     if Path(test_video).exists():
         # Process video
         results = pipeline.process_video(
-            test_video,
-            output_path="results/pipeline_output.mp4",
-            show_preview=True
+            test_video, output_path="results/pipeline_output.mp4", show_preview=True
         )
 
         # Print statistics
         stats = pipeline.get_statistics()
-        print("\n" + "="*50)
+        print("\n" + "=" * 50)
         print("PIPELINE STATISTICS")
-        print("="*50)
+        print("=" * 50)
         for key, value in stats.items():
             print(f"{key}: {value}")
     else:

@@ -1,20 +1,22 @@
 """Comprehensive stroke similarity analysis ensemble."""
 
-from typing import Dict, List, Optional
+from typing import Any
 
 import numpy as np
 
 from src.analysis.dtw_analyzer import DTWAnalyzer
 from src.analysis.frechet_analyzer import FrechetAnalyzer
 from src.analysis.similarity_measures import (
+    LCSS,
     CosineSimilarityAnalyzer,
     CrossCorrelationAnalyzer,
-    EuclideanDistanceAnalyzer,
-    LCSS,
     SoftDTW,
 )
 from src.analysis.stroke_phases import StrokePhaseDetector
 from src.utils.config import load_analysis_config
+
+StrokeData = dict[str, Any]
+ScoreDict = dict[str, float]
 
 
 class StrokeSimilarityEnsemble:
@@ -22,7 +24,7 @@ class StrokeSimilarityEnsemble:
 
     def __init__(
         self,
-        weights: Optional[Dict[str, float]] = None,
+        weights: ScoreDict | None = None,
     ):
         """Initialize stroke similarity ensemble.
 
@@ -35,7 +37,7 @@ class StrokeSimilarityEnsemble:
         if weights is None:
             weights = config.get("similarity_weights", {})
 
-        self.weights = {
+        self.weights: ScoreDict = {
             "dtw": weights.get("dtw_score", 0.4),
             "frechet": weights.get("frechet_score", 0.3),
             "phase_timing": weights.get("phase_timing_score", 0.2),
@@ -56,10 +58,10 @@ class StrokeSimilarityEnsemble:
 
     def comprehensive_comparison(
         self,
-        stroke1: Dict,
-        stroke2: Dict,
+        stroke1: StrokeData,
+        stroke2: StrokeData,
         fps: float = 30.0,
-    ) -> Dict:
+    ) -> dict[str, Any]:
         """Perform comprehensive comparison between two strokes.
 
         Args:
@@ -70,10 +72,14 @@ class StrokeSimilarityEnsemble:
         Returns:
             Dictionary with all comparison metrics and overall score.
         """
-        results = {
-            "individual_scores": {},
-            "distances": {},
-            "recommendations": [],
+        individual_scores: ScoreDict = {}
+        distances: ScoreDict = {}
+        recommendations: list[str] = []
+
+        results: dict[str, Any] = {
+            "individual_scores": individual_scores,
+            "distances": distances,
+            "recommendations": recommendations,
         }
 
         # 1. DTW comparison on hand trajectories
@@ -83,10 +89,8 @@ class StrokeSimilarityEnsemble:
                 np.array(stroke2["left_hand_path"]),
                 normalize=True,
             )
-            results["distances"]["dtw_left_hand"] = dtw_left
-            results["individual_scores"]["dtw_left"] = self._distance_to_score(
-                dtw_left, max_dist=10.0
-            )
+            distances["dtw_left_hand"] = dtw_left
+            individual_scores["dtw_left"] = self._distance_to_score(dtw_left, max_dist=10.0)
 
         if "right_hand_path" in stroke1 and "right_hand_path" in stroke2:
             dtw_right = self.dtw_analyzer.compute_distance(
@@ -94,16 +98,13 @@ class StrokeSimilarityEnsemble:
                 np.array(stroke2["right_hand_path"]),
                 normalize=True,
             )
-            results["distances"]["dtw_right_hand"] = dtw_right
-            results["individual_scores"]["dtw_right"] = self._distance_to_score(
-                dtw_right, max_dist=10.0
-            )
+            distances["dtw_right_hand"] = dtw_right
+            individual_scores["dtw_right"] = self._distance_to_score(dtw_right, max_dist=10.0)
 
         # Average DTW score
-        if "dtw_left" in results["individual_scores"] and "dtw_right" in results["individual_scores"]:
-            results["individual_scores"]["dtw_overall"] = (
-                results["individual_scores"]["dtw_left"]
-                + results["individual_scores"]["dtw_right"]
+        if "dtw_left" in individual_scores and "dtw_right" in individual_scores:
+            individual_scores["dtw_overall"] = (
+                individual_scores["dtw_left"] + individual_scores["dtw_right"]
             ) / 2.0
 
         # 2. Fréchet distance comparison
@@ -116,42 +117,42 @@ class StrokeSimilarityEnsemble:
             )
 
             if "overall_distance" in frechet_results:
-                results["distances"]["frechet"] = frechet_results["overall_distance"]
-                results["individual_scores"]["frechet"] = self._distance_to_score(
+                distances["frechet"] = frechet_results["overall_distance"]
+                individual_scores["frechet"] = self._distance_to_score(
                     frechet_results["overall_distance"], max_dist=100.0
                 )
 
         # 3. Phase timing comparison
         phase_score = self._compare_phase_timing(stroke1, stroke2, fps)
         if phase_score is not None:
-            results["individual_scores"]["phase_timing"] = phase_score
+            individual_scores["phase_timing"] = phase_score
 
         # 4. Joint angle similarity (cosine)
         if "angles" in stroke1 and "angles" in stroke2:
             angle_similarity = self._compare_angles(stroke1["angles"], stroke2["angles"])
-            results["individual_scores"]["angle_similarity"] = angle_similarity * 100
+            individual_scores["angle_similarity"] = angle_similarity * 100
 
         # 5. Additional measures
-        results["additional_measures"] = self._compute_additional_measures(
-            stroke1, stroke2
-        )
+        additional_measures = self._compute_additional_measures(stroke1, stroke2)
+        results["additional_measures"] = additional_measures
 
         # Calculate weighted overall score
-        results["overall_score"] = self._calculate_weighted_score(
-            results["individual_scores"]
-        )
+        overall_score = self._calculate_weighted_score(individual_scores)
+        results["overall_score"] = overall_score
 
         # Generate recommendations
-        results["recommendations"] = self._generate_recommendations(results)
+        results["recommendations"] = self._generate_recommendations(
+            individual_scores, overall_score
+        )
 
         return results
 
     def _compare_phase_timing(
         self,
-        stroke1: Dict,
-        stroke2: Dict,
+        stroke1: StrokeData,
+        stroke2: StrokeData,
         fps: float,
-    ) -> Optional[float]:
+    ) -> float | None:
         """Compare phase timing between strokes.
 
         Args:
@@ -202,8 +203,8 @@ class StrokeSimilarityEnsemble:
 
     def _compare_angles(
         self,
-        angles1: Dict[str, np.ndarray],
-        angles2: Dict[str, np.ndarray],
+        angles1: dict[str, np.ndarray],
+        angles2: dict[str, np.ndarray],
     ) -> float:
         """Compare joint angle sequences using cosine similarity.
 
@@ -216,7 +217,7 @@ class StrokeSimilarityEnsemble:
         """
         similarities = []
 
-        for joint_name in angles1.keys():
+        for joint_name in angles1:
             if joint_name in angles2:
                 seq1 = angles1[joint_name]
                 seq2 = angles2[joint_name]
@@ -226,9 +227,7 @@ class StrokeSimilarityEnsemble:
                 seq2 = seq2[~np.isnan(seq2)]
 
                 if len(seq1) > 0 and len(seq2) > 0:
-                    similarity = CosineSimilarityAnalyzer.compute_similarity(
-                        seq1, seq2
-                    )
+                    similarity = CosineSimilarityAnalyzer.compute_similarity(seq1, seq2)
                     similarities.append(similarity)
 
         if similarities:
@@ -238,9 +237,9 @@ class StrokeSimilarityEnsemble:
 
     def _compute_additional_measures(
         self,
-        stroke1: Dict,
-        stroke2: Dict,
-    ) -> Dict:
+        stroke1: StrokeData,
+        stroke2: StrokeData,
+    ) -> ScoreDict:
         """Compute additional similarity measures.
 
         Args:
@@ -250,7 +249,7 @@ class StrokeSimilarityEnsemble:
         Returns:
             Dictionary with additional metrics.
         """
-        additional = {}
+        additional: ScoreDict = {}
 
         # Soft-DTW
         if "left_hand_path" in stroke1 and "left_hand_path" in stroke2:
@@ -275,9 +274,7 @@ class StrokeSimilarityEnsemble:
             path2 = np.array(stroke2["left_hand_path"])
 
             # Use x-coordinate for correlation
-            corr = CrossCorrelationAnalyzer.compute_max_correlation(
-                path1[:, 0], path2[:, 0]
-            )
+            corr = CrossCorrelationAnalyzer.compute_max_correlation(path1[:, 0], path2[:, 0])
             additional["cross_correlation"] = corr * 100
 
         return additional
@@ -296,7 +293,7 @@ class StrokeSimilarityEnsemble:
         score = (1.0 - distance / max_dist) * 100.0
         return max(0.0, min(100.0, score))
 
-    def _calculate_weighted_score(self, individual_scores: Dict) -> float:
+    def _calculate_weighted_score(self, individual_scores: ScoreDict) -> float:
         """Calculate weighted overall score.
 
         Args:
@@ -325,7 +322,11 @@ class StrokeSimilarityEnsemble:
         else:
             return 0.0
 
-    def _generate_recommendations(self, results: Dict) -> List[str]:
+    def _generate_recommendations(
+        self,
+        individual_scores: ScoreDict,
+        overall_score: float,
+    ) -> list[str]:
         """Generate technique recommendations based on comparison.
 
         Args:
@@ -336,47 +337,41 @@ class StrokeSimilarityEnsemble:
         """
         recommendations = []
 
-        scores = results["individual_scores"]
-
         # DTW recommendations
-        if "dtw_left" in scores and scores["dtw_left"] < 70:
+        if "dtw_left" in individual_scores and individual_scores["dtw_left"] < 70:
             recommendations.append(
                 "Left hand path differs significantly from reference. "
                 "Focus on maintaining consistent hand trajectory."
             )
 
-        if "dtw_right" in scores and scores["dtw_right"] < 70:
+        if "dtw_right" in individual_scores and individual_scores["dtw_right"] < 70:
             recommendations.append(
                 "Right hand path differs significantly from reference. "
                 "Focus on maintaining consistent hand trajectory."
             )
 
         # Phase timing recommendations
-        if "phase_timing" in scores and scores["phase_timing"] < 70:
+        if "phase_timing" in individual_scores and individual_scores["phase_timing"] < 70:
             recommendations.append(
                 "Stroke phase timing differs from reference. "
                 "Work on stroke rhythm and timing consistency."
             )
 
         # Angle recommendations
-        if "angle_similarity" in scores and scores["angle_similarity"] < 70:
+        if "angle_similarity" in individual_scores and individual_scores["angle_similarity"] < 70:
             recommendations.append(
                 "Joint angles differ from reference technique. "
                 "Focus on proper arm positioning throughout the stroke."
             )
 
         # Overall recommendation
-        overall = results.get("overall_score", 0)
+        overall = overall_score
         if overall >= 90:
-            recommendations.insert(
-                0, "Excellent technique! Very close to reference stroke."
-            )
+            recommendations.insert(0, "Excellent technique! Very close to reference stroke.")
         elif overall >= 75:
             recommendations.insert(0, "Good technique with minor areas for improvement.")
         elif overall >= 60:
-            recommendations.insert(
-                0, "Moderate similarity. Several aspects need attention."
-            )
+            recommendations.insert(0, "Moderate similarity. Several aspects need attention.")
         else:
             recommendations.insert(
                 0, "Significant differences from reference. Focus on fundamental technique."
@@ -386,9 +381,9 @@ class StrokeSimilarityEnsemble:
 
     def progressive_analysis(
         self,
-        stroke_sequence: List[Dict],
+        stroke_sequence: list[StrokeData],
         fps: float = 30.0,
-    ) -> Dict:
+    ) -> dict[str, Any]:
         """Analyze progression/fatigue over multiple strokes.
 
         Args:
@@ -401,7 +396,7 @@ class StrokeSimilarityEnsemble:
         if len(stroke_sequence) < 2:
             return {"error": "Need at least 2 strokes for progression analysis"}
 
-        results = {
+        results: dict[str, Any] = {
             "stroke_count": len(stroke_sequence),
             "consistency_scores": [],
             "trend": "stable",
@@ -415,7 +410,8 @@ class StrokeSimilarityEnsemble:
                 stroke_sequence[i + 1],
                 fps,
             )
-            results["consistency_scores"].append(comparison["overall_score"])
+            consistency_scores = results["consistency_scores"]
+            consistency_scores.append(float(comparison.get("overall_score", 0.0)))
 
         # Analyze trend
         if len(results["consistency_scores"]) >= 3:

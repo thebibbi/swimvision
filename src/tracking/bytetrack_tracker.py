@@ -8,14 +8,15 @@ ByteTrack is a simple yet effective multi-object tracking method that:
 Perfect for tracking swimmers who frequently go underwater.
 """
 
-from typing import Dict, List, Optional, Tuple
-import numpy as np
-from dataclasses import dataclass, field
 from collections import deque
+from dataclasses import dataclass, field
 from enum import Enum
+
+import numpy as np
 
 try:
     from filterpy.kalman import KalmanFilter
+
     FILTERPY_AVAILABLE = True
 except ImportError:
     FILTERPY_AVAILABLE = False
@@ -23,6 +24,7 @@ except ImportError:
 
 class TrackState(Enum):
     """Track state enumeration."""
+
     NEW = 1
     TRACKED = 2
     LOST = 3
@@ -32,9 +34,10 @@ class TrackState(Enum):
 @dataclass
 class SwimmerTrack:
     """Tracked swimmer data."""
+
     track_id: int
     bbox: np.ndarray  # [x1, y1, x2, y2]
-    keypoints: Optional[np.ndarray] = None  # (17, 3)
+    keypoints: np.ndarray | None = None  # (17, 3)
     confidence: float = 0.0
     state: TrackState = TrackState.NEW
     frame_id: int = 0
@@ -47,7 +50,7 @@ class SwimmerTrack:
     keypoint_history: deque = field(default_factory=lambda: deque(maxlen=30))
 
     # Kalman filter for bbox prediction
-    kalman_filter: Optional[object] = None
+    kalman_filter: object | None = None
 
     def __post_init__(self):
         """Initialize Kalman filter after creation."""
@@ -63,31 +66,35 @@ class SwimmerTrack:
         kf = KalmanFilter(dim_x=8, dim_z=4)
 
         # State transition matrix (constant velocity model)
-        kf.F = np.array([
-            [1, 0, 0, 0, 1, 0, 0, 0],  # x = x + vx
-            [0, 1, 0, 0, 0, 1, 0, 0],  # y = y + vy
-            [0, 0, 1, 0, 0, 0, 1, 0],  # a = a + va
-            [0, 0, 0, 1, 0, 0, 0, 1],  # r = r + vr
-            [0, 0, 0, 0, 1, 0, 0, 0],  # vx = vx
-            [0, 0, 0, 0, 0, 1, 0, 0],  # vy = vy
-            [0, 0, 0, 0, 0, 0, 1, 0],  # va = va
-            [0, 0, 0, 0, 0, 0, 0, 1],  # vr = vr
-        ])
+        kf.F = np.array(
+            [
+                [1, 0, 0, 0, 1, 0, 0, 0],  # x = x + vx
+                [0, 1, 0, 0, 0, 1, 0, 0],  # y = y + vy
+                [0, 0, 1, 0, 0, 0, 1, 0],  # a = a + va
+                [0, 0, 0, 1, 0, 0, 0, 1],  # r = r + vr
+                [0, 0, 0, 0, 1, 0, 0, 0],  # vx = vx
+                [0, 0, 0, 0, 0, 1, 0, 0],  # vy = vy
+                [0, 0, 0, 0, 0, 0, 1, 0],  # va = va
+                [0, 0, 0, 0, 0, 0, 0, 1],  # vr = vr
+            ]
+        )
 
         # Measurement function (observe position and size)
-        kf.H = np.array([
-            [1, 0, 0, 0, 0, 0, 0, 0],
-            [0, 1, 0, 0, 0, 0, 0, 0],
-            [0, 0, 1, 0, 0, 0, 0, 0],
-            [0, 0, 0, 1, 0, 0, 0, 0],
-        ])
+        kf.H = np.array(
+            [
+                [1, 0, 0, 0, 0, 0, 0, 0],
+                [0, 1, 0, 0, 0, 0, 0, 0],
+                [0, 0, 1, 0, 0, 0, 0, 0],
+                [0, 0, 0, 1, 0, 0, 0, 0],
+            ]
+        )
 
         # Measurement noise
         kf.R *= 10.0
 
         # Process noise
         kf.Q[-4:, -4:] *= 0.01  # Low velocity noise
-        kf.Q[:4, :4] *= 0.1     # Position/size noise
+        kf.Q[:4, :4] *= 0.1  # Position/size noise
 
         # Initial state covariance
         kf.P *= 10.0
@@ -121,7 +128,9 @@ class SwimmerTrack:
 
         return np.array([x1, y1, x2, y2])
 
-    def update(self, bbox: np.ndarray, keypoints: Optional[np.ndarray] = None, confidence: float = 0.0):
+    def update(
+        self, bbox: np.ndarray, keypoints: np.ndarray | None = None, confidence: float = 0.0
+    ):
         """Update track with new detection.
 
         Args:
@@ -160,23 +169,19 @@ class SwimmerTrack:
                 self.kalman_filter.update(measurement)
 
         # Update state
-        if self.state == TrackState.NEW and self.hits >= 3:
-            self.state = TrackState.TRACKED
-        elif self.state == TrackState.LOST:
+        if self.state == TrackState.NEW and self.hits >= 3 or self.state == TrackState.LOST:
             self.state = TrackState.TRACKED
 
     def mark_missed(self):
         """Mark track as missed in current frame."""
         self.time_since_update += 1
 
-        if self.state == TrackState.NEW:
-            self.state = TrackState.REMOVED
-        elif self.time_since_update > 30:  # Lost for 1 second at 30 FPS
+        if self.state == TrackState.NEW or self.time_since_update > 30:
             self.state = TrackState.REMOVED
         elif self.time_since_update > 5:  # Lost for 5 frames
             self.state = TrackState.LOST
 
-    def get_velocity(self) -> Tuple[float, float]:
+    def get_velocity(self) -> tuple[float, float]:
         """Get current velocity from Kalman filter.
 
         Returns:
@@ -200,10 +205,10 @@ class ByteTrackTracker:
 
     def __init__(
         self,
-        track_thresh: float = 0.5,      # High confidence threshold
-        track_buffer: int = 30,          # Frames to keep lost tracks
-        match_thresh: float = 0.8,       # IoU threshold for matching
-        min_box_area: float = 100.0,     # Minimum bbox area
+        track_thresh: float = 0.5,  # High confidence threshold
+        track_buffer: int = 30,  # Frames to keep lost tracks
+        match_thresh: float = 0.8,  # IoU threshold for matching
+        min_box_area: float = 100.0,  # Minimum bbox area
     ):
         """Initialize ByteTrack tracker.
 
@@ -219,18 +224,18 @@ class ByteTrackTracker:
         self.min_box_area = min_box_area
 
         # Track management
-        self.tracked_tracks: List[SwimmerTrack] = []
-        self.lost_tracks: List[SwimmerTrack] = []
-        self.removed_tracks: List[SwimmerTrack] = []
+        self.tracked_tracks: list[SwimmerTrack] = []
+        self.lost_tracks: list[SwimmerTrack] = []
+        self.removed_tracks: list[SwimmerTrack] = []
 
         self.frame_id = 0
         self.track_id_count = 0
 
     def update(
         self,
-        detections: List[Dict],
-        frame_id: Optional[int] = None,
-    ) -> List[SwimmerTrack]:
+        detections: list[dict],
+        frame_id: int | None = None,
+    ) -> list[SwimmerTrack]:
         """Update tracks with new detections.
 
         Args:
@@ -250,9 +255,9 @@ class ByteTrackTracker:
         low_dets = []
 
         for det in detections:
-            bbox = np.array(det.get('bbox', [0, 0, 0, 0]))
-            keypoints = det.get('keypoints')
-            conf = det.get('confidence', np.mean(keypoints[:, 2]) if keypoints is not None else 0.0)
+            bbox = np.array(det.get("bbox", [0, 0, 0, 0]))
+            keypoints = det.get("keypoints")
+            conf = det.get("confidence", np.mean(keypoints[:, 2]) if keypoints is not None else 0.0)
 
             # Filter by area
             area = (bbox[2] - bbox[0]) * (bbox[3] - bbox[1])
@@ -260,9 +265,9 @@ class ByteTrackTracker:
                 continue
 
             det_data = {
-                'bbox': bbox,
-                'keypoints': keypoints,
-                'confidence': conf,
+                "bbox": bbox,
+                "keypoints": keypoints,
+                "confidence": conf,
             }
 
             if conf >= self.track_thresh:
@@ -278,24 +283,28 @@ class ByteTrackTracker:
 
         # Step 2: Match low confidence detections to unmatched tracks
         unmatched_tracks, matched_low_tracks, unmatched_low_dets = self._match_detections(
-            unmatched_tracks, low_dets, 0.5  # Lower threshold for low conf
+            unmatched_tracks,
+            low_dets,
+            0.5,  # Lower threshold for low conf
         )
 
         # Update matched tracks
         for track, det in matched_tracks + matched_low_tracks:
-            track.update(det['bbox'], det['keypoints'], det['confidence'])
+            track.update(det["bbox"], det["keypoints"], det["confidence"])
             track.frame_id = self.frame_id
             track.age += 1
 
         # Step 3: Try to match unmatched high confidence detections to lost tracks
         lost_tracks = [t for t in self.lost_tracks if t.state == TrackState.LOST]
         unmatched_lost, matched_lost, remaining_high_dets = self._match_detections(
-            lost_tracks, unmatched_high_dets, 0.6  # More lenient for lost tracks
+            lost_tracks,
+            unmatched_high_dets,
+            0.6,  # More lenient for lost tracks
         )
 
         # Reactivate matched lost tracks
         for track, det in matched_lost:
-            track.update(det['bbox'], det['keypoints'], det['confidence'])
+            track.update(det["bbox"], det["keypoints"], det["confidence"])
             track.frame_id = self.frame_id
             track.age += 1
             self.tracked_tracks.append(track)
@@ -305,9 +314,9 @@ class ByteTrackTracker:
         for det in remaining_high_dets:
             new_track = SwimmerTrack(
                 track_id=self._get_new_id(),
-                bbox=det['bbox'],
-                keypoints=det['keypoints'],
-                confidence=det['confidence'],
+                bbox=det["bbox"],
+                keypoints=det["keypoints"],
+                confidence=det["confidence"],
                 state=TrackState.NEW,
                 frame_id=self.frame_id,
                 age=1,
@@ -334,8 +343,7 @@ class ByteTrackTracker:
 
         # Clean up old removed tracks
         self.removed_tracks = [
-            t for t in self.removed_tracks
-            if self.frame_id - t.frame_id < self.track_buffer
+            t for t in self.removed_tracks if self.frame_id - t.frame_id < self.track_buffer
         ]
 
         # Return active tracks
@@ -343,10 +351,10 @@ class ByteTrackTracker:
 
     def _match_detections(
         self,
-        tracks: List[SwimmerTrack],
-        detections: List[Dict],
+        tracks: list[SwimmerTrack],
+        detections: list[dict],
         iou_threshold: float,
-    ) -> Tuple[List[SwimmerTrack], List[Tuple[SwimmerTrack, Dict]], List[Dict]]:
+    ) -> tuple[list[SwimmerTrack], list[tuple[SwimmerTrack, dict]], list[dict]]:
         """Match detections to tracks using IoU.
 
         Args:
@@ -365,7 +373,7 @@ class ByteTrackTracker:
 
         # Get predicted bboxes for tracks
         track_bboxes = np.array([t.predict() for t in tracks])
-        det_bboxes = np.array([d['bbox'] for d in detections])
+        det_bboxes = np.array([d["bbox"] for d in detections])
 
         # Compute IoU matrix
         iou_matrix = self._compute_iou_matrix(track_bboxes, det_bboxes)
@@ -376,10 +384,7 @@ class ByteTrackTracker:
         )
 
         # Build matched pairs
-        matched_pairs = [
-            (tracks[track_idx], detections[det_idx])
-            for track_idx, det_idx in matches
-        ]
+        matched_pairs = [(tracks[track_idx], detections[det_idx]) for track_idx, det_idx in matches]
 
         # Build unmatched lists
         unmatched_tracks_list = [tracks[idx] for idx in unmatched_tracks]
@@ -441,7 +446,7 @@ class ByteTrackTracker:
         self,
         cost_matrix: np.ndarray,
         threshold: float,
-    ) -> Tuple[List[Tuple[int, int]], List[int], List[int]]:
+    ) -> tuple[list[tuple[int, int]], list[int], list[int]]:
         """Greedy linear assignment (simplified Hungarian).
 
         Args:
@@ -483,7 +488,7 @@ class ByteTrackTracker:
         self.track_id_count += 1
         return self.track_id_count
 
-    def get_track_history(self, track_id: int, history_len: int = 30) -> Optional[Dict]:
+    def get_track_history(self, track_id: int, history_len: int = 30) -> dict | None:
         """Get trajectory history for a track.
 
         Args:
@@ -504,11 +509,11 @@ class ByteTrackTracker:
             return None
 
         return {
-            'track_id': track_id,
-            'bbox_history': list(track.bbox_history)[-history_len:],
-            'keypoint_history': list(track.keypoint_history)[-history_len:],
-            'age': track.age,
-            'state': track.state.name,
+            "track_id": track_id,
+            "bbox_history": list(track.bbox_history)[-history_len:],
+            "keypoint_history": list(track.keypoint_history)[-history_len:],
+            "age": track.age,
+            "state": track.state.name,
         }
 
     def reset(self):
@@ -539,11 +544,13 @@ def demo_bytetrack():
         x = 100 + frame_id * 10
         y = 200 + frame_id * 5
 
-        detections = [{
-            'bbox': np.array([x, y, x + 100, y + 150]),
-            'keypoints': np.random.rand(17, 3) * 0.8 + 0.1,
-            'confidence': 0.9,
-        }]
+        detections = [
+            {
+                "bbox": np.array([x, y, x + 100, y + 150]),
+                "keypoints": np.random.rand(17, 3) * 0.8 + 0.1,
+                "confidence": 0.9,
+            }
+        ]
 
         # Update tracker
         tracks = tracker.update(detections, frame_id)
@@ -551,7 +558,9 @@ def demo_bytetrack():
         print(f"\nFrame {frame_id}:")
         print(f"  Active tracks: {len(tracks)}")
         for track in tracks:
-            print(f"    Track {track.track_id}: bbox={track.bbox}, hits={track.hits}, age={track.age}")
+            print(
+                f"    Track {track.track_id}: bbox={track.bbox}, hits={track.hits}, age={track.age}"
+            )
 
     print("\n✅ Demo complete!")
 

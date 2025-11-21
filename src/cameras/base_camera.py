@@ -1,7 +1,7 @@
 """Base camera interface for SwimVision."""
 
 from abc import ABC, abstractmethod
-from typing import Generator, Optional, Tuple
+from collections.abc import Generator
 
 import numpy as np
 
@@ -25,7 +25,7 @@ class BaseCamera(ABC):
         pass
 
     @abstractmethod
-    def read(self) -> Tuple[bool, Optional[np.ndarray]]:
+    def read(self) -> tuple[bool, np.ndarray | None]:
         """Read a single frame from camera.
 
         Returns:
@@ -57,7 +57,7 @@ class BaseCamera(ABC):
         pass
 
     @abstractmethod
-    def get_resolution(self) -> Tuple[int, int]:
+    def get_resolution(self) -> tuple[int, int]:
         """Get camera resolution.
 
         Returns:

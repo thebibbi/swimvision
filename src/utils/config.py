@@ -2,7 +2,7 @@
 
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 import yaml
 from dotenv import load_dotenv
@@ -14,7 +14,7 @@ load_dotenv()
 class Config:
     """Configuration manager for loading YAML config files and environment variables."""
 
-    def __init__(self, config_dir: Optional[Path] = None):
+    def __init__(self, config_dir: Path | None = None):
         """Initialize configuration manager.
 
         Args:
@@ -26,9 +26,9 @@ class Config:
             config_dir = project_root / "config"
 
         self.config_dir = Path(config_dir)
-        self._configs: Dict[str, Dict[str, Any]] = {}
+        self._configs: dict[str, dict[str, Any]] = {}
 
-    def load(self, config_name: str) -> Dict[str, Any]:
+    def load(self, config_name: str) -> dict[str, Any]:
         """Load a configuration file.
 
         Args:
@@ -67,7 +67,7 @@ class Config:
         config = self.load(config_name)
         keys = key.split(".")
 
-        value = config
+        value: Any = config
         for k in keys:
             if isinstance(value, dict):
                 value = value.get(k)
@@ -91,7 +91,7 @@ class Config:
         """
         return os.getenv(key, default)
 
-    def reload(self, config_name: str) -> Dict[str, Any]:
+    def reload(self, config_name: str) -> dict[str, Any]:
         """Reload a configuration file (clears cache).
 
         Args:
@@ -106,7 +106,7 @@ class Config:
 
 
 # Global config instance
-_global_config: Optional[Config] = None
+_global_config: Config | None = None
 
 
 def get_config() -> Config:
@@ -121,7 +121,7 @@ def get_config() -> Config:
     return _global_config
 
 
-def load_pose_config() -> Dict[str, Any]:
+def load_pose_config() -> dict[str, Any]:
     """Load pose estimation configuration.
 
     Returns:
@@ -130,7 +130,7 @@ def load_pose_config() -> Dict[str, Any]:
     return get_config().load("pose_config")
 
 
-def load_camera_config() -> Dict[str, Any]:
+def load_camera_config() -> dict[str, Any]:
     """Load camera configuration.
 
     Returns:
@@ -139,7 +139,7 @@ def load_camera_config() -> Dict[str, Any]:
     return get_config().load("camera_config")
 
 
-def load_analysis_config() -> Dict[str, Any]:
+def load_analysis_config() -> dict[str, Any]:
     """Load analysis configuration.
 
     Returns:

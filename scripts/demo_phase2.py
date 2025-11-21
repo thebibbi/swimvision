@@ -4,17 +4,18 @@ SwimVision Pro - Phase 2 Demonstration Script
 This script demonstrates all Phase 2 time-series analysis features with synthetic swimming data.
 """
 
-import numpy as np
-import matplotlib.pyplot as plt
 from pathlib import Path
+
+import matplotlib.pyplot as plt
+import numpy as np
 
 from src.analysis.dtw_analyzer import DTWAnalyzer
 from src.analysis.frechet_analyzer import FrechetAnalyzer
 from src.analysis.similarity_measures import (
-    SoftDTW,
     LCSS,
     CosineSimilarityAnalyzer,
     CrossCorrelationAnalyzer,
+    SoftDTW,
 )
 from src.analysis.stroke_phases import StrokePhaseDetector
 from src.analysis.stroke_similarity import StrokeSimilarityEnsemble
@@ -63,8 +64,8 @@ def generate_synthetic_freestyle_stroke(
     right_hand_path = np.column_stack([right_hand_x, right_hand_y])
 
     # Generate joint angles (sinusoidal patterns)
-    left_elbow = 90 + 60 * np.sin(2 * np.pi * stroke_rate * t + np.pi/4)
-    right_elbow = 90 + 60 * np.sin(2 * np.pi * stroke_rate * t + np.pi + np.pi/4)
+    left_elbow = 90 + 60 * np.sin(2 * np.pi * stroke_rate * t + np.pi / 4)
+    right_elbow = 90 + 60 * np.sin(2 * np.pi * stroke_rate * t + np.pi + np.pi / 4)
 
     left_shoulder = 120 + 30 * np.sin(2 * np.pi * stroke_rate * t)
     right_shoulder = 120 + 30 * np.sin(2 * np.pi * stroke_rate * t + np.pi)
@@ -114,7 +115,9 @@ def demonstrate_dtw_analysis():
 
     print(f"DTW Distance: {distance:.4f}")
     print(f"Similarity Score: {similarity_score:.2f}/100")
-    print(f"Interpretation: {'Excellent match!' if similarity_score > 90 else 'Good match' if similarity_score > 75 else 'Moderate similarity'}")
+    print(
+        f"Interpretation: {'Excellent match!' if similarity_score > 90 else 'Good match' if similarity_score > 75 else 'Moderate similarity'}"
+    )
 
     # Get warping path
     path = analyzer.get_warping_path(left_path1, left_path2)
@@ -152,7 +155,9 @@ def demonstrate_similarity_measures():
     angles2 = stroke2["angles"]["left_elbow"]
     cosine_sim = CosineSimilarityAnalyzer.compute_similarity(angles1, angles2)
     print(f"   Cosine Similarity: {cosine_sim:.4f}")
-    print(f"   Angle alignment: {'Excellent' if cosine_sim > 0.9 else 'Good' if cosine_sim > 0.7 else 'Moderate'}")
+    print(
+        f"   Angle alignment: {'Excellent' if cosine_sim > 0.9 else 'Good' if cosine_sim > 0.7 else 'Moderate'}"
+    )
 
     # Cross-Correlation
     print("\n4. Cross-Correlation (Phase Alignment)")
@@ -186,12 +191,12 @@ def demonstrate_frechet_analysis():
     shape1 = analyzer.analyze_trajectory_shape(left_path1)
     shape2 = analyzer.analyze_trajectory_shape(left_path2)
 
-    print(f"\n  Stroke 1:")
+    print("\n  Stroke 1:")
     print(f"    Path length: {shape1['path_length']:.2f} pixels")
     print(f"    Path efficiency: {shape1['path_efficiency']:.3f}")
     print(f"    Bounding box: {shape1['bbox_width']:.1f} x {shape1['bbox_height']:.1f}")
 
-    print(f"\n  Stroke 2:")
+    print("\n  Stroke 2:")
     print(f"    Path length: {shape2['path_length']:.2f} pixels")
     print(f"    Path efficiency: {shape2['path_efficiency']:.3f}")
     print(f"    Bounding box: {shape2['bbox_width']:.1f} x {shape2['bbox_height']:.1f}")
@@ -225,7 +230,9 @@ def demonstrate_stroke_phases():
     print("-" * 50)
 
     for phase in phases:
-        print(f"{phase['phase'].value:<12} {phase['start_frame']:<8} {phase['end_frame']:<8} {phase['duration']:.3f}")
+        print(
+            f"{phase['phase'].value:<12} {phase['start_frame']:<8} {phase['end_frame']:<8} {phase['duration']:.3f}"
+        )
 
     # Phase durations
     print("\nAverage Phase Durations:")
@@ -305,7 +312,7 @@ def demonstrate_progressive_analysis():
     results = ensemble.progressive_analysis(stroke_sequence, fps=30.0)
 
     print(f"Total strokes analyzed: {results['stroke_count']}")
-    print(f"\nConsistency scores between consecutive strokes:")
+    print("\nConsistency scores between consecutive strokes:")
 
     for i, score in enumerate(results["consistency_scores"], 1):
         bar = "█" * int(score / 5)
@@ -313,13 +320,13 @@ def demonstrate_progressive_analysis():
 
     print(f"\nTrend analysis: {results['trend'].upper()}")
 
-    if results['fatigue_detected']:
+    if results["fatigue_detected"]:
         print("⚠️  FATIGUE DETECTED: Technique degradation observed")
         print("   Recommendation: Take a break to maintain form")
     else:
         print("✅ No significant fatigue detected")
 
-    if 'trend_slope' in results:
+    if "trend_slope" in results:
         print(f"   Trend slope: {results['trend_slope']:.2f} points/stroke")
 
 
@@ -336,11 +343,15 @@ def create_visualization():
 
     # Create plot
     fig, axes = plt.subplots(2, 2, figsize=(14, 10))
-    fig.suptitle("SwimVision Pro - Phase 2 Demonstration", fontsize=16, fontweight='bold')
+    fig.suptitle("SwimVision Pro - Phase 2 Demonstration", fontsize=16, fontweight="bold")
 
     # Hand trajectories
-    axes[0, 0].plot(left_path1[:, 0], -left_path1[:, 1], 'b-o', label='Reference Stroke', markersize=3)
-    axes[0, 0].plot(left_path2[:, 0], -left_path2[:, 1], 'r-o', label='Test Stroke', markersize=3, alpha=0.7)
+    axes[0, 0].plot(
+        left_path1[:, 0], -left_path1[:, 1], "b-o", label="Reference Stroke", markersize=3
+    )
+    axes[0, 0].plot(
+        left_path2[:, 0], -left_path2[:, 1], "r-o", label="Test Stroke", markersize=3, alpha=0.7
+    )
     axes[0, 0].set_title("Hand Trajectories Comparison")
     axes[0, 0].set_xlabel("X Position (pixels)")
     axes[0, 0].set_ylabel("Y Position (pixels)")
@@ -351,8 +362,8 @@ def create_visualization():
     angles1 = stroke1["angles"]["left_elbow"]
     angles2 = stroke2["angles"]["left_elbow"]
 
-    axes[0, 1].plot(angles1, 'b-', label='Reference Stroke', linewidth=2)
-    axes[0, 1].plot(angles2, 'r-', label='Test Stroke', linewidth=2, alpha=0.7)
+    axes[0, 1].plot(angles1, "b-", label="Reference Stroke", linewidth=2)
+    axes[0, 1].plot(angles2, "r-", label="Test Stroke", linewidth=2, alpha=0.7)
     axes[0, 1].set_title("Left Elbow Angle Over Time")
     axes[0, 1].set_xlabel("Frame")
     axes[0, 1].set_ylabel("Angle (degrees)")
@@ -370,19 +381,19 @@ def create_visualization():
     lcss_score = lcss.compute_similarity(left_path1, left_path2, normalize=True) * 100
 
     scores = [dtw_score, soft_score, lcss_score]
-    methods = ['DTW', 'Soft-DTW', 'LCSS']
+    methods = ["DTW", "Soft-DTW", "LCSS"]
 
-    axes[1, 0].bar(methods, scores, color=['#3498db', '#e74c3c', '#2ecc71'])
+    axes[1, 0].bar(methods, scores, color=["#3498db", "#e74c3c", "#2ecc71"])
     axes[1, 0].set_title("Similarity Scores by Method")
     axes[1, 0].set_ylabel("Similarity Score (0-100)")
     axes[1, 0].set_ylim([0, 100])
-    axes[1, 0].axhline(y=75, color='orange', linestyle='--', alpha=0.5, label='Good threshold')
-    axes[1, 0].axhline(y=90, color='green', linestyle='--', alpha=0.5, label='Excellent threshold')
+    axes[1, 0].axhline(y=75, color="orange", linestyle="--", alpha=0.5, label="Good threshold")
+    axes[1, 0].axhline(y=90, color="green", linestyle="--", alpha=0.5, label="Excellent threshold")
     axes[1, 0].legend()
-    axes[1, 0].grid(True, alpha=0.3, axis='y')
+    axes[1, 0].grid(True, alpha=0.3, axis="y")
 
     # Text summary
-    axes[1, 1].axis('off')
+    axes[1, 1].axis("off")
     summary_text = f"""
     ANALYSIS SUMMARY
     ═══════════════════════════════════════
@@ -408,8 +419,15 @@ def create_visualization():
       ✓ Trajectory Comparison
       ✓ Angle Analysis
     """
-    axes[1, 1].text(0.1, 0.5, summary_text, fontsize=10, family='monospace',
-                    verticalalignment='center', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.3))
+    axes[1, 1].text(
+        0.1,
+        0.5,
+        summary_text,
+        fontsize=10,
+        family="monospace",
+        verticalalignment="center",
+        bbox=dict(boxstyle="round", facecolor="wheat", alpha=0.3),
+    )
 
     plt.tight_layout()
 
@@ -417,7 +435,7 @@ def create_visualization():
     output_path = Path("data/exports/phase2_demonstration.png")
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    plt.savefig(output_path, dpi=150, bbox_inches='tight')
+    plt.savefig(output_path, dpi=150, bbox_inches="tight")
     print(f"✅ Visualization saved to: {output_path}")
 
     plt.close()

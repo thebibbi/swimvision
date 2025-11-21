@@ -1,11 +1,10 @@
 """Visualization overlay for hand tracking with occlusion handling."""
 
-from typing import List, Optional, Tuple
 import cv2
 import numpy as np
 
-from src.tracking.occlusion_detector import OcclusionState
 from src.tracking.hand_tracker import TrackingResult
+from src.tracking.occlusion_detector import OcclusionState
 
 
 class TrackingOverlay:
@@ -13,9 +12,9 @@ class TrackingOverlay:
 
     def __init__(
         self,
-        observed_color: Tuple[int, int, int] = (0, 255, 0),      # Green
-        predicted_color: Tuple[int, int, int] = (255, 165, 0),   # Orange
-        occluded_color: Tuple[int, int, int] = (255, 0, 0),      # Red
+        observed_color: tuple[int, int, int] = (0, 255, 0),  # Green
+        predicted_color: tuple[int, int, int] = (255, 165, 0),  # Orange
+        occluded_color: tuple[int, int, int] = (255, 0, 0),  # Red
         trail_length: int = 30,
         trail_thickness: int = 2,
     ):
@@ -60,13 +59,13 @@ class TrackingOverlay:
         if result.is_predicted:
             if result.occlusion_state == OcclusionState.FULLY_OCCLUDED:
                 color = self.occluded_color
-                marker = '?'
+                marker = "?"
             else:
                 color = self.predicted_color
-                marker = '~'
+                marker = "~"
         else:
             color = self.observed_color
-            marker = '✓'
+            marker = "✓"
 
         # Draw position marker
         pos = result.position.astype(int)
@@ -103,7 +102,7 @@ class TrackingOverlay:
         # Draw velocity vector if requested
         if show_velocity and result.velocity is not None:
             vel = result.velocity * 5  # Scale for visibility
-            end_pos = (pos + vel.astype(int))
+            end_pos = pos + vel.astype(int)
             cv2.arrowedLine(
                 frame,
                 tuple(pos),
@@ -118,8 +117,8 @@ class TrackingOverlay:
     def draw_trajectory_trail(
         self,
         frame: np.ndarray,
-        trajectory: List[np.ndarray],
-        occlusion_states: Optional[List[OcclusionState]] = None,
+        trajectory: list[np.ndarray],
+        occlusion_states: list[OcclusionState] | None = None,
     ) -> np.ndarray:
         """Draw trajectory trail with color-coded occlusion states.
 
@@ -137,9 +136,9 @@ class TrackingOverlay:
             return frame
 
         # Get recent trajectory
-        trail = trajectory[-self.trail_length:]
+        trail = trajectory[-self.trail_length :]
         states = (
-            occlusion_states[-self.trail_length:]
+            occlusion_states[-self.trail_length :]
             if occlusion_states and len(occlusion_states) >= len(trail)
             else None
         )
@@ -179,7 +178,7 @@ class TrackingOverlay:
         self,
         frame: np.ndarray,
         occlusion_state: OcclusionState,
-        position: Tuple[int, int] = (10, 30),
+        position: tuple[int, int] = (10, 30),
     ) -> np.ndarray:
         """Draw occlusion state indicator.
 
@@ -228,7 +227,7 @@ class TrackingOverlay:
     def draw_comparison_overlay(
         self,
         frame: np.ndarray,
-        observed: Optional[np.ndarray],
+        observed: np.ndarray | None,
         predicted: np.ndarray,
         label: str = "Hand",
     ) -> np.ndarray:

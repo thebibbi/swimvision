@@ -1,12 +1,6 @@
 """Unit tests for geometry utilities."""
 
-import math
-
-import numpy as np
-import pytest
-
 from src.utils.geometry import (
-    calculate_acceleration,
     calculate_angle,
     calculate_body_roll,
     calculate_trajectory_length,

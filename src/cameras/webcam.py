@@ -1,7 +1,5 @@
 """Webcam camera implementation."""
 
-from typing import Optional, Tuple
-
 import cv2
 import numpy as np
 
@@ -14,10 +12,10 @@ class WebcamCamera(BaseCamera):
 
     def __init__(
         self,
-        camera_id: Optional[int] = None,
-        width: Optional[int] = None,
-        height: Optional[int] = None,
-        fps: Optional[int] = None,
+        camera_id: int | None = None,
+        width: int | None = None,
+        height: int | None = None,
+        fps: int | None = None,
     ):
         """Initialize webcam camera.
 
@@ -38,7 +36,7 @@ class WebcamCamera(BaseCamera):
         self.height = height if height is not None else webcam_config.get("height", 720)
         self.target_fps = fps if fps is not None else webcam_config.get("fps", 30)
 
-        self._cap: Optional[cv2.VideoCapture] = None
+        self._cap: cv2.VideoCapture | None = None
 
     def open(self) -> bool:
         """Open webcam connection.
@@ -75,7 +73,7 @@ class WebcamCamera(BaseCamera):
             print(f"Error opening webcam: {e}")
             return False
 
-    def read(self) -> Tuple[bool, Optional[np.ndarray]]:
+    def read(self) -> tuple[bool, np.ndarray | None]:
         """Read a single frame from webcam.
 
         Returns:
@@ -110,7 +108,7 @@ class WebcamCamera(BaseCamera):
         """
         return self._fps
 
-    def get_resolution(self) -> Tuple[int, int]:
+    def get_resolution(self) -> tuple[int, int]:
         """Get webcam resolution.
 
         Returns:

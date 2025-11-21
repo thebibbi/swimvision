@@ -2,6 +2,7 @@
 
 import time
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 import cv2
 import numpy as np
@@ -17,6 +18,9 @@ from src.analysis.symmetry_analyzer import SymmetryAnalyzer
 from src.cameras.video_file import VideoFileCamera
 from src.pose.swimming_keypoints import SwimmingKeypoints
 from src.pose.yolo_estimator import YOLOPoseEstimator
+
+if TYPE_CHECKING:
+    from src.pose.base_estimator import BasePoseEstimator
 from src.visualization.pose_overlay import PoseOverlay
 
 # Page configuration
@@ -66,13 +70,17 @@ init_session_state()
 # ============================================================================
 
 
+AngleHistory = dict[str, list[float]]
+VideoAnalysisResult = dict[str, Any]
+
+
 def process_video(
     video_path: Path,
     pose_estimator: YOLOPoseEstimator,
     fps: float,
     analyze_phases: bool,
     extract_trajectory: bool,
-) -> dict:
+) -> VideoAnalysisResult:
     """Process uploaded video and extract analysis data.
 
     Args:
@@ -96,11 +104,13 @@ def process_video(
     pose_sequence = []
     left_hand_path = []
     right_hand_path = []
-    angles_over_time = {
+    angles_over_time: AngleHistory = {
         "left_elbow": [],
         "right_elbow": [],
         "left_shoulder": [],
         "right_shoulder": [],
+        "left_knee": [],
+        "right_knee": [],
     }
 
     try:
@@ -152,7 +162,9 @@ def process_video(
                 angles = st.session_state.swimming_analyzer.get_body_angles(pose_data)
                 for angle_name in angles_over_time:
                     value = angles.get(angle_name)
-                    angles_over_time[angle_name].append(value if value is not None else np.nan)
+                    angles_over_time[angle_name].append(
+                        float(value) if value is not None else float(np.nan)
+                    )
             else:
                 # Debug: Log when pose is not detected
                 if frame_idx % 30 == 0:  # Log every 30 frames to avoid spam
@@ -170,7 +182,7 @@ def process_video(
                 if show_skeleton:
                     frame = st.session_state.pose_overlay.draw_skeleton(frame, pose_data)
 
-                if show_bbox and pose_data.get("bbox"):
+                if show_bbox and "bbox" in pose_data and pose_data["bbox"] is not None:
                     frame = st.session_state.pose_overlay.draw_bbox(frame, pose_data["bbox"])
 
                 if show_angles:
@@ -239,7 +251,7 @@ def process_video(
 
     except Exception as e:
         st.error(f"Error processing video: {e}")
-        return None
+        return {}
 
 
 def display_analysis_results(results: dict, video_name: str):
@@ -706,6 +718,7 @@ with st.sidebar:
             try:
                 if pose_model_type == "YOLO11":
                     from src.pose.yolo_estimator import YOLOPoseEstimator
+
                     st.session_state.pose_estimator = YOLOPoseEstimator(
                         model_name=model_variant,
                         device=device,
@@ -714,6 +727,7 @@ with st.sidebar:
 
                 elif pose_model_type == "MediaPipe":
                     from src.pose.mediapipe_estimator import MediaPipeEstimator
+
                     complexity_map = {"Lite (0)": 0, "Full (1)": 1, "Heavy (2)": 2}
                     complexity = complexity_map[model_variant]
                     st.session_state.pose_estimator = MediaPipeEstimator(
@@ -724,6 +738,7 @@ with st.sidebar:
 
                 elif pose_model_type == "OpenPose":
                     from src.pose.openpose_estimator import OpenPoseEstimator
+
                     st.session_state.pose_estimator = OpenPoseEstimator(
                         device=device,
                         confidence=confidence_threshold,
@@ -731,6 +746,7 @@ with st.sidebar:
 
                 elif pose_model_type == "AlphaPose":
                     from src.pose.alphapose_estimator import AlphaPoseEstimator
+
                     st.session_state.pose_estimator = AlphaPoseEstimator(
                         model_name=model_variant,
                         device=device,
@@ -739,6 +755,7 @@ with st.sidebar:
 
                 elif pose_model_type == "SMPL-X":
                     from src.pose.smpl_estimator import SMPLEstimator
+
                     st.session_state.pose_estimator = SMPLEstimator(
                         model_type="smplx",
                         device=device,
@@ -746,13 +763,15 @@ with st.sidebar:
                     )
 
                 elif pose_model_type == "Multi-Model Fusion":
-                    from src.pose.model_fusion import MultiModelFusion, FusionMethod
-                    from src.pose.yolo_estimator import YOLOPoseEstimator
                     from src.pose.mediapipe_estimator import MediaPipeEstimator
+                    from src.pose.model_fusion import FusionMethod, MultiModelFusion
+                    from src.pose.yolo_estimator import YOLOPoseEstimator
 
                     # Create individual models
-                    models = []
-                    models.append(YOLOPoseEstimator("yolo11n-pose.pt", device, confidence_threshold))
+                    models: list["BasePoseEstimator"] = []
+                    models.append(
+                        YOLOPoseEstimator("yolo11n-pose.pt", device, confidence_threshold)
+                    )
                     models.append(MediaPipeEstimator(1, confidence_threshold, device))
 
                     # Map fusion method
@@ -772,20 +791,22 @@ with st.sidebar:
                 st.success(f"{pose_model_type} model loaded successfully!")
 
                 # Initialize water surface detector if enabled
-                if st.session_state.get('enable_water_surface', False):
+                if st.session_state.get("enable_water_surface", False):
                     from src.analysis.water_surface_detector import WaterSurfaceDetector
-                    method_map = {
+
+                    water_detection_map = {
                         "Edge Detection": "edge",
                         "Color Segmentation": "color",
                         "Hybrid": "hybrid",
                     }
                     st.session_state.water_surface_detector = WaterSurfaceDetector(
-                        detection_method=method_map.get(water_detection_method, "hybrid"),
+                        detection_method=water_detection_map.get(water_detection_method, "hybrid"),
                     )
 
                 # Initialize adaptive tuner if enabled
-                if st.session_state.get('enable_adaptive_tuning', False):
+                if st.session_state.get("enable_adaptive_tuning", False):
                     from src.utils.adaptive_tuning import AdaptiveThresholdTuner
+
                     st.session_state.adaptive_tuner = AdaptiveThresholdTuner(auto_tune=True)
 
             except ImportError as e:

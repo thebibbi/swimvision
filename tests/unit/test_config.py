@@ -1,7 +1,5 @@
 """Unit tests for configuration management."""
 
-import pytest
-
 from src.utils.config import Config, get_config
 
 

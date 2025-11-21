@@ -4,12 +4,12 @@ Stores and retrieves ideal trajectories for each stroke phase,
 used to guide predictions during occlusion.
 """
 
-from typing import Dict, List, Optional, Tuple
-from pathlib import Path
-from dataclasses import dataclass
-import numpy as np
-import pickle
 import json
+import pickle
+from dataclasses import dataclass
+from pathlib import Path
+
+import numpy as np
 
 from src.analysis.stroke_phases import StrokePhase
 
@@ -17,13 +17,14 @@ from src.analysis.stroke_phases import StrokePhase
 @dataclass
 class PhaseTemplate:
     """Template for a specific stroke phase."""
+
     phase: StrokePhase
     stroke_type: str  # 'freestyle', 'backstroke', 'breaststroke', 'butterfly'
-    hand_side: str    # 'left' or 'right'
+    hand_side: str  # 'left' or 'right'
     trajectory: np.ndarray  # Nx2 array of (x, y) positions
-    duration_frames: int    # Typical duration in frames
-    velocity_profile: Optional[np.ndarray] = None  # Nx2 velocity vectors
-    metadata: Optional[Dict] = None
+    duration_frames: int  # Typical duration in frames
+    velocity_profile: np.ndarray | None = None  # Nx2 velocity vectors
+    metadata: dict | None = None
 
 
 class PhaseTemplateManager:
@@ -39,7 +40,7 @@ class PhaseTemplateManager:
         self.template_dir.mkdir(parents=True, exist_ok=True)
 
         # Template storage
-        self.templates: Dict[str, PhaseTemplate] = {}
+        self.templates: dict[str, PhaseTemplate] = {}
 
         # Load existing templates
         self.load_all_templates()
@@ -51,7 +52,7 @@ class PhaseTemplateManager:
         hand_side: str,
         trajectory: np.ndarray,
         fps: float = 30.0,
-        metadata: Optional[Dict] = None,
+        metadata: dict | None = None,
     ) -> PhaseTemplate:
         """Create a new phase template.
 
@@ -98,7 +99,7 @@ class PhaseTemplateManager:
         stroke_type: str,
         phase: StrokePhase,
         hand_side: str,
-    ) -> Optional[PhaseTemplate]:
+    ) -> PhaseTemplate | None:
         """Get template for specific stroke, phase, and hand.
 
         Args:
@@ -116,7 +117,7 @@ class PhaseTemplateManager:
         self,
         template: PhaseTemplate,
         progress: float,
-    ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+    ) -> tuple[np.ndarray, np.ndarray | None]:
         """Interpolate position along template based on progress.
 
         Args:
@@ -140,7 +141,7 @@ class PhaseTemplateManager:
 
         return position, velocity
 
-    def save_template(self, template: PhaseTemplate, filename: Optional[str] = None):
+    def save_template(self, template: PhaseTemplate, filename: str | None = None):
         """Save template to file.
 
         Args:
@@ -152,10 +153,10 @@ class PhaseTemplateManager:
 
         filepath = self.template_dir / filename
 
-        with open(filepath, 'wb') as f:
+        with open(filepath, "wb") as f:
             pickle.dump(template, f)
 
-    def load_template(self, filename: str) -> Optional[PhaseTemplate]:
+    def load_template(self, filename: str) -> PhaseTemplate | None:
         """Load template from file.
 
         Args:
@@ -170,7 +171,7 @@ class PhaseTemplateManager:
             return None
 
         try:
-            with open(filepath, 'rb') as f:
+            with open(filepath, "rb") as f:
                 template = pickle.load(f)
             return template
         except Exception as e:
@@ -200,7 +201,7 @@ class PhaseTemplateManager:
     def create_from_recorded_stroke(
         self,
         full_trajectory: np.ndarray,
-        phase_segments: List[Dict],
+        phase_segments: list[dict],
         stroke_type: str,
         hand_side: str,
         fps: float = 30.0,
@@ -222,9 +223,9 @@ class PhaseTemplateManager:
         ]
         """
         for segment in phase_segments:
-            phase = segment['phase']
-            start = segment['start_frame']
-            end = segment['end_frame']
+            phase = segment["phase"]
+            start = segment["start_frame"]
+            end = segment["end_frame"]
 
             # Extract phase trajectory
             phase_trajectory = full_trajectory[start:end]
@@ -240,9 +241,9 @@ class PhaseTemplateManager:
                 trajectory=phase_trajectory,
                 fps=fps,
                 metadata={
-                    'source': 'recorded',
-                    'start_frame': start,
-                    'end_frame': end,
+                    "source": "recorded",
+                    "start_frame": start,
+                    "end_frame": end,
                 },
             )
 
@@ -258,60 +259,60 @@ class PhaseTemplateManager:
         entry_traj = self._generate_entry_trajectory(fps)
         self.create_template(
             StrokePhase.ENTRY,
-            'freestyle',
-            'left',
+            "freestyle",
+            "left",
             entry_traj,
             fps,
-            {'source': 'generated'},
+            {"source": "generated"},
         )
 
         # Catch phase (underwater, setting up pull)
         catch_traj = self._generate_catch_trajectory(fps)
         self.create_template(
             StrokePhase.CATCH,
-            'freestyle',
-            'left',
+            "freestyle",
+            "left",
             catch_traj,
             fps,
-            {'source': 'generated'},
+            {"source": "generated"},
         )
 
         # Pull phase (main propulsion)
         pull_traj = self._generate_pull_trajectory(fps)
         self.create_template(
             StrokePhase.PULL,
-            'freestyle',
-            'left',
+            "freestyle",
+            "left",
             pull_traj,
             fps,
-            {'source': 'generated'},
+            {"source": "generated"},
         )
 
         # Push phase (completing stroke)
         push_traj = self._generate_push_trajectory(fps)
         self.create_template(
             StrokePhase.PUSH,
-            'freestyle',
-            'left',
+            "freestyle",
+            "left",
             push_traj,
             fps,
-            {'source': 'generated'},
+            {"source": "generated"},
         )
 
         # Recovery phase (arm out of water)
         recovery_traj = self._generate_recovery_trajectory(fps)
         self.create_template(
             StrokePhase.RECOVERY,
-            'freestyle',
-            'left',
+            "freestyle",
+            "left",
             recovery_traj,
             fps,
-            {'source': 'generated'},
+            {"source": "generated"},
         )
 
         # Mirror for right hand
         for phase in StrokePhase:
-            left_template = self.get_template('freestyle', phase, 'left')
+            left_template = self.get_template("freestyle", phase, "left")
             if left_template:
                 # Mirror x-coordinates
                 right_traj = left_template.trajectory.copy()
@@ -319,11 +320,11 @@ class PhaseTemplateManager:
 
                 self.create_template(
                     phase,
-                    'freestyle',
-                    'right',
+                    "freestyle",
+                    "right",
                     right_traj,
                     fps,
-                    {'source': 'generated_mirror'},
+                    {"source": "generated_mirror"},
                 )
 
     def _generate_entry_trajectory(self, fps: float) -> np.ndarray:
@@ -344,7 +345,7 @@ class PhaseTemplateManager:
         t = np.linspace(0, 1, duration)
 
         x = 180 + 10 * (1 - t)  # Slight forward
-        y = 180 + 30 * t        # Deeper
+        y = 180 + 30 * t  # Deeper
 
         return np.column_stack([x, y])
 
@@ -376,7 +377,7 @@ class PhaseTemplateManager:
         duration = int(0.5 * fps)
         t = np.linspace(0, 1, duration)
 
-        x = 60 + 90 * t   # Forward (recovering)
+        x = 60 + 90 * t  # Forward (recovering)
         y = 220 - 120 * t  # Upward and forward
 
         return np.column_stack([x, y])
@@ -391,15 +392,15 @@ class PhaseTemplateManager:
 
         for key, template in self.templates.items():
             export_data[key] = {
-                'stroke_type': template.stroke_type,
-                'phase': template.phase.value,
-                'hand_side': template.hand_side,
-                'trajectory': template.trajectory.tolist(),
-                'duration_frames': template.duration_frames,
-                'metadata': template.metadata,
+                "stroke_type": template.stroke_type,
+                "phase": template.phase.value,
+                "hand_side": template.hand_side,
+                "trajectory": template.trajectory.tolist(),
+                "duration_frames": template.duration_frames,
+                "metadata": template.metadata,
             }
 
-        with open(filename, 'w') as f:
+        with open(filename, "w") as f:
             json.dump(export_data, f, indent=2)
 
     def _get_template_key(
@@ -420,34 +421,34 @@ class PhaseTemplateManager:
         """
         return f"{stroke_type}_{phase.value}_{hand_side}"
 
-    def get_statistics(self) -> Dict:
+    def get_statistics(self) -> dict:
         """Get template statistics.
 
         Returns:
             Dictionary with statistics.
         """
         stats = {
-            'total_templates': len(self.templates),
-            'by_stroke': {},
-            'by_phase': {},
-            'by_hand': {},
+            "total_templates": len(self.templates),
+            "by_stroke": {},
+            "by_phase": {},
+            "by_hand": {},
         }
 
         for template in self.templates.values():
             # By stroke
-            if template.stroke_type not in stats['by_stroke']:
-                stats['by_stroke'][template.stroke_type] = 0
-            stats['by_stroke'][template.stroke_type] += 1
+            if template.stroke_type not in stats["by_stroke"]:
+                stats["by_stroke"][template.stroke_type] = 0
+            stats["by_stroke"][template.stroke_type] += 1
 
             # By phase
             phase_name = template.phase.value
-            if phase_name not in stats['by_phase']:
-                stats['by_phase'][phase_name] = 0
-            stats['by_phase'][phase_name] += 1
+            if phase_name not in stats["by_phase"]:
+                stats["by_phase"][phase_name] = 0
+            stats["by_phase"][phase_name] += 1
 
             # By hand
-            if template.hand_side not in stats['by_hand']:
-                stats['by_hand'][template.hand_side] = 0
-            stats['by_hand'][template.hand_side] += 1
+            if template.hand_side not in stats["by_hand"]:
+                stats["by_hand"][template.hand_side] = 0
+            stats["by_hand"][template.hand_side] += 1
 
         return stats

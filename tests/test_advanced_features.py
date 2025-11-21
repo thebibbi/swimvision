@@ -12,11 +12,10 @@ Tests:
 - Model comparison tools
 """
 
-import pytest
+from unittest.mock import Mock
+
 import numpy as np
-import cv2
-from pathlib import Path
-from unittest.mock import Mock, patch
+import pytest
 
 from src.pose.base_estimator import KeypointFormat
 
@@ -30,9 +29,14 @@ class TestMediaPipeEstimator:
         return np.zeros((480, 640, 3), dtype=np.uint8)
 
     @pytest.mark.skipif(
-        not hasattr(__import__('src.pose.mediapipe_estimator', fromlist=['MEDIAPIPE_AVAILABLE']), 'MEDIAPIPE_AVAILABLE') or
-        not __import__('src.pose.mediapipe_estimator', fromlist=['MEDIAPIPE_AVAILABLE']).MEDIAPIPE_AVAILABLE,
-        reason="MediaPipe not installed"
+        not hasattr(
+            __import__("src.pose.mediapipe_estimator", fromlist=["MEDIAPIPE_AVAILABLE"]),
+            "MEDIAPIPE_AVAILABLE",
+        )
+        or not __import__(
+            "src.pose.mediapipe_estimator", fromlist=["MEDIAPIPE_AVAILABLE"]
+        ).MEDIAPIPE_AVAILABLE,
+        reason="MediaPipe not installed",
     )
     def test_mediapipe_initialization(self):
         """Test MediaPipe estimator initialization."""
@@ -47,9 +51,14 @@ class TestMediaPipeEstimator:
         assert estimator.supports_multi_person() is False
 
     @pytest.mark.skipif(
-        not hasattr(__import__('src.pose.mediapipe_estimator', fromlist=['MEDIAPIPE_AVAILABLE']), 'MEDIAPIPE_AVAILABLE') or
-        not __import__('src.pose.mediapipe_estimator', fromlist=['MEDIAPIPE_AVAILABLE']).MEDIAPIPE_AVAILABLE,
-        reason="MediaPipe not installed"
+        not hasattr(
+            __import__("src.pose.mediapipe_estimator", fromlist=["MEDIAPIPE_AVAILABLE"]),
+            "MEDIAPIPE_AVAILABLE",
+        )
+        or not __import__(
+            "src.pose.mediapipe_estimator", fromlist=["MEDIAPIPE_AVAILABLE"]
+        ).MEDIAPIPE_AVAILABLE,
+        reason="MediaPipe not installed",
     )
     def test_mediapipe_estimate_pose(self, test_image):
         """Test pose estimation."""
@@ -60,14 +69,19 @@ class TestMediaPipeEstimator:
 
         # May return None on blank image
         if pose_data is not None:
-            assert 'keypoints' in pose_data
-            assert 'keypoint_names' in pose_data
-            assert pose_data['format'] == KeypointFormat.MEDIAPIPE_33
+            assert "keypoints" in pose_data
+            assert "keypoint_names" in pose_data
+            assert pose_data["format"] == KeypointFormat.MEDIAPIPE_33
 
     @pytest.mark.skipif(
-        not hasattr(__import__('src.pose.mediapipe_estimator', fromlist=['MEDIAPIPE_AVAILABLE']), 'MEDIAPIPE_AVAILABLE') or
-        not __import__('src.pose.mediapipe_estimator', fromlist=['MEDIAPIPE_AVAILABLE']).MEDIAPIPE_AVAILABLE,
-        reason="MediaPipe not installed"
+        not hasattr(
+            __import__("src.pose.mediapipe_estimator", fromlist=["MEDIAPIPE_AVAILABLE"]),
+            "MEDIAPIPE_AVAILABLE",
+        )
+        or not __import__(
+            "src.pose.mediapipe_estimator", fromlist=["MEDIAPIPE_AVAILABLE"]
+        ).MEDIAPIPE_AVAILABLE,
+        reason="MediaPipe not installed",
     )
     def test_mediapipe_convert_to_coco17(self):
         """Test COCO-17 conversion."""
@@ -78,15 +92,15 @@ class TestMediaPipeEstimator:
         # Create mock pose data
         mock_keypoints = np.random.rand(33, 3)
         pose_data = {
-            'keypoints': mock_keypoints,
-            'keypoint_names': ['kp' + str(i) for i in range(33)],
-            'format': KeypointFormat.MEDIAPIPE_33,
+            "keypoints": mock_keypoints,
+            "keypoint_names": ["kp" + str(i) for i in range(33)],
+            "format": KeypointFormat.MEDIAPIPE_33,
         }
 
         coco17_data = estimator.convert_to_coco17(pose_data)
 
-        assert coco17_data['format'] == KeypointFormat.COCO_17
-        assert len(coco17_data['keypoints']) == 17
+        assert coco17_data["format"] == KeypointFormat.COCO_17
+        assert len(coco17_data["keypoints"]) == 17
 
 
 class TestModelFusion:
@@ -100,21 +114,23 @@ class TestModelFusion:
         for i in range(3):
             model = Mock()
             model.model_name = f"model_{i}"
-            model.estimate_pose = Mock(return_value=(
-                {
-                    'keypoints': np.random.rand(17, 3),
-                    'keypoint_names': [f'kp_{j}' for j in range(17)],
-                    'format': KeypointFormat.COCO_17,
-                },
-                None
-            ))
+            model.estimate_pose = Mock(
+                return_value=(
+                    {
+                        "keypoints": np.random.rand(17, 3),
+                        "keypoint_names": [f"kp_{j}" for j in range(17)],
+                        "format": KeypointFormat.COCO_17,
+                    },
+                    None,
+                )
+            )
             models.append(model)
 
         return models
 
     def test_fusion_initialization(self, mock_models):
         """Test fusion system initialization."""
-        from src.pose.model_fusion import MultiModelFusion, FusionMethod
+        from src.pose.model_fusion import FusionMethod, MultiModelFusion
 
         fusion = MultiModelFusion(
             models=mock_models,
@@ -126,7 +142,7 @@ class TestModelFusion:
 
     def test_weighted_average_fusion(self, mock_models):
         """Test weighted average fusion."""
-        from src.pose.model_fusion import MultiModelFusion, FusionMethod
+        from src.pose.model_fusion import FusionMethod, MultiModelFusion
 
         fusion = MultiModelFusion(
             models=mock_models,
@@ -143,7 +159,7 @@ class TestModelFusion:
 
     def test_fusion_model_weights(self, mock_models):
         """Test custom model weights."""
-        from src.pose.model_fusion import MultiModelFusion, FusionMethod
+        from src.pose.model_fusion import FusionMethod, MultiModelFusion
 
         fusion = MultiModelFusion(models=mock_models, fusion_method=FusionMethod.WEIGHTED_AVERAGE)
 
@@ -187,7 +203,7 @@ class TestMultiCameraFusion:
 
     def test_triangulation(self, camera_params):
         """Test 3D point triangulation."""
-        from src.pose.multi_camera_fusion import MultiCameraFusion, CameraParameters
+        from src.pose.multi_camera_fusion import CameraParameters, MultiCameraFusion
 
         # Create second camera
         K2 = np.array([[1000, 0, 320], [0, 1000, 240], [0, 0, 1]], dtype=np.float32)
@@ -207,8 +223,7 @@ class TestMultiCameraFusion:
 
         # Test triangulation with mock observations
         point_3d, quality, errors = fusion._triangulate_point(
-            [np.array([320, 240]), np.array([340, 240])],
-            ["cam1", "cam2"]
+            [np.array([320, 240]), np.array([340, 240])], ["cam1", "cam2"]
         )
 
         assert point_3d is not None
@@ -253,13 +268,17 @@ class TestWaterSurfaceDetector:
         surface_info = detector.detect_surface(test_pool_image)
 
         if surface_info is not None:
-            assert hasattr(surface_info, 'water_level')
-            assert hasattr(surface_info, 'surface_line')
-            assert hasattr(surface_info, 'confidence')
+            assert hasattr(surface_info, "water_level")
+            assert hasattr(surface_info, "surface_line")
+            assert hasattr(surface_info, "confidence")
 
     def test_water_state_detection(self):
         """Test water state (above/below) detection."""
-        from src.analysis.water_surface_detector import WaterSurfaceDetector, WaterSurfaceInfo, WaterState
+        from src.analysis.water_surface_detector import (
+            WaterState,
+            WaterSurfaceDetector,
+            WaterSurfaceInfo,
+        )
 
         detector = WaterSurfaceDetector()
 
@@ -291,7 +310,7 @@ class TestAdaptiveTuning:
 
     def test_tuner_initialization(self):
         """Test tuner initialization."""
-        from src.utils.adaptive_tuning import AdaptiveThresholdTuner, AdaptiveParameters
+        from src.utils.adaptive_tuning import AdaptiveThresholdTuner
 
         tuner = AdaptiveThresholdTuner(auto_tune=True)
 
@@ -307,7 +326,7 @@ class TestAdaptiveTuning:
         # Simulate low confidence detections
         for _ in range(20):
             detection = {
-                'keypoints': np.random.rand(17, 3) * 0.3,  # Low confidence
+                "keypoints": np.random.rand(17, 3) * 0.3,  # Low confidence
             }
             tuner.update(detection)
 
@@ -323,7 +342,7 @@ class TestAdaptiveTuning:
         # Simulate excellent conditions (high confidence, high detection rate)
         for _ in range(30):
             detection = {
-                'keypoints': np.random.rand(17, 3) * 0.9 + 0.1,  # High confidence
+                "keypoints": np.random.rand(17, 3) * 0.9 + 0.1,  # High confidence
             }
             tuner.update(detection)
 
@@ -339,11 +358,11 @@ class TestAdaptiveTuning:
 
         stats = calculate_frame_stats(frame)
 
-        assert 'brightness' in stats
-        assert 'contrast' in stats
-        assert 'sharpness' in stats
-        assert stats['brightness'] >= 0
-        assert stats['brightness'] <= 255
+        assert "brightness" in stats
+        assert "contrast" in stats
+        assert "sharpness" in stats
+        assert stats["brightness"] >= 0
+        assert stats["brightness"] <= 255
 
 
 class TestModelComparison:
@@ -357,14 +376,16 @@ class TestModelComparison:
         for i in range(2):
             model = Mock()
             model.model_name = f"model_{i}"
-            model.estimate_pose = Mock(return_value=(
-                {
-                    'keypoints': np.random.rand(17, 3),
-                    'keypoint_names': [f'kp_{j}' for j in range(17)],
-                    'format': KeypointFormat.COCO_17,
-                },
-                None
-            ))
+            model.estimate_pose = Mock(
+                return_value=(
+                    {
+                        "keypoints": np.random.rand(17, 3),
+                        "keypoint_names": [f"kp_{j}" for j in range(17)],
+                        "format": KeypointFormat.COCO_17,
+                    },
+                    None,
+                )
+            )
             models[f"model_{i}"] = model
 
         return models
@@ -387,9 +408,9 @@ class TestModelComparison:
         test_frame = np.zeros((480, 640, 3), dtype=np.uint8)
         results = comparison._process_frame_all_models(test_frame, 0)
 
-        assert 'frame_idx' in results
-        assert 'models' in results
-        assert len(results['models']) == 2
+        assert "frame_idx" in results
+        assert "models" in results
+        assert len(results["models"]) == 2
 
     def test_metrics_calculation(self, mock_models_dict):
         """Test metrics calculation."""
@@ -413,14 +434,19 @@ class TestIntegration:
     """Integration tests for combined features."""
 
     @pytest.mark.skipif(
-        not hasattr(__import__('src.pose.mediapipe_estimator', fromlist=['MEDIAPIPE_AVAILABLE']), 'MEDIAPIPE_AVAILABLE') or
-        not __import__('src.pose.mediapipe_estimator', fromlist=['MEDIAPIPE_AVAILABLE']).MEDIAPIPE_AVAILABLE,
-        reason="MediaPipe not installed"
+        not hasattr(
+            __import__("src.pose.mediapipe_estimator", fromlist=["MEDIAPIPE_AVAILABLE"]),
+            "MEDIAPIPE_AVAILABLE",
+        )
+        or not __import__(
+            "src.pose.mediapipe_estimator", fromlist=["MEDIAPIPE_AVAILABLE"]
+        ).MEDIAPIPE_AVAILABLE,
+        reason="MediaPipe not installed",
     )
     def test_mediapipe_with_water_surface(self):
         """Test MediaPipe with water surface detection."""
-        from src.pose.mediapipe_estimator import MediaPipeEstimator
         from src.analysis.water_surface_detector import WaterSurfaceDetector
+        from src.pose.mediapipe_estimator import MediaPipeEstimator
 
         estimator = MediaPipeEstimator()
         detector = WaterSurfaceDetector()
@@ -448,14 +474,14 @@ class TestIntegration:
             # Varying confidence
             conf = 0.3 + 0.4 * (i / 30.0)
             detection = {
-                'keypoints': np.random.rand(17, 3) * conf,
+                "keypoints": np.random.rand(17, 3) * conf,
             }
 
             params = tuner.update(detection)
 
         # Parameters should have adapted
         assert params is not None
-        assert hasattr(params, 'confidence_threshold')
+        assert hasattr(params, "confidence_threshold")
 
 
 if __name__ == "__main__":

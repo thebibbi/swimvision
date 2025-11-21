@@ -1,13 +1,12 @@
 """Unit tests for similarity measures."""
 
 import numpy as np
-import pytest
 
 from src.analysis.similarity_measures import (
+    LCSS,
     CosineSimilarityAnalyzer,
     CrossCorrelationAnalyzer,
     EuclideanDistanceAnalyzer,
-    LCSS,
     SoftDTW,
 )
 

@@ -7,16 +7,17 @@ Detects when swimmer's hands are underwater (occluded) using:
 """
 
 from enum import Enum
-from typing import Optional, Dict, List
+
 import numpy as np
 
 
 class OcclusionState(Enum):
     """State of hand visibility."""
-    VISIBLE = "visible"              # Hand clearly visible
-    PARTIALLY_OCCLUDED = "partial"   # Hand partially visible (low confidence)
-    FULLY_OCCLUDED = "occluded"      # Hand underwater/not visible
-    TRANSITIONING = "transitioning"   # Entering or exiting water
+
+    VISIBLE = "visible"  # Hand clearly visible
+    PARTIALLY_OCCLUDED = "partial"  # Hand partially visible (low confidence)
+    FULLY_OCCLUDED = "occluded"  # Hand underwater/not visible
+    TRANSITIONING = "transitioning"  # Entering or exiting water
 
 
 class OcclusionDetector:
@@ -45,7 +46,7 @@ class OcclusionDetector:
         # State tracking
         self.current_state = OcclusionState.VISIBLE
         self.frames_in_current_state = 0
-        self.occlusion_history: List[OcclusionState] = []
+        self.occlusion_history: list[OcclusionState] = []
 
         # Statistics
         self.total_occlusion_events = 0
@@ -54,8 +55,8 @@ class OcclusionDetector:
     def detect(
         self,
         confidence: float,
-        stroke_phase: Optional[str] = None,
-        position: Optional[np.ndarray] = None,
+        stroke_phase: str | None = None,
+        position: np.ndarray | None = None,
     ) -> OcclusionState:
         """Detect current occlusion state.
 
@@ -118,11 +119,11 @@ class OcclusionDetector:
             Occlusion state based on phase.
         """
         # Underwater phases
-        underwater_phases = ['catch', 'pull', 'push']
+        underwater_phases = ["catch", "pull", "push"]
         # Above water phases
-        visible_phases = ['entry', 'recovery']
+        visible_phases = ["entry", "recovery"]
         # Transitional phases
-        transitional_phases = ['release']
+        transitional_phases = ["release"]
 
         phase_lower = stroke_phase.lower()
 
@@ -151,13 +152,14 @@ class OcclusionDetector:
             Combined state (conservative approach).
         """
         # If either method says fully occluded, trust it
-        if (confidence_state == OcclusionState.FULLY_OCCLUDED or
-            phase_state == OcclusionState.FULLY_OCCLUDED):
+        if (
+            confidence_state == OcclusionState.FULLY_OCCLUDED
+            or phase_state == OcclusionState.FULLY_OCCLUDED
+        ):
             return OcclusionState.FULLY_OCCLUDED
 
         # If both say visible, it's visible
-        if (confidence_state == OcclusionState.VISIBLE and
-            phase_state == OcclusionState.VISIBLE):
+        if confidence_state == OcclusionState.VISIBLE and phase_state == OcclusionState.VISIBLE:
             return OcclusionState.VISIBLE
 
         # If transitioning according to phase
@@ -186,12 +188,15 @@ class OcclusionDetector:
 
             # Only change state if we've seen enough consistent frames
             # Exception: allow immediate transition to visible
-            if (self.frames_in_current_state >= self.min_occlusion_frames or
-                new_state == OcclusionState.VISIBLE):
-
+            if (
+                self.frames_in_current_state >= self.min_occlusion_frames
+                or new_state == OcclusionState.VISIBLE
+            ):
                 # Track occlusion events
-                if (self.current_state != OcclusionState.FULLY_OCCLUDED and
-                    new_state == OcclusionState.FULLY_OCCLUDED):
+                if (
+                    self.current_state != OcclusionState.FULLY_OCCLUDED
+                    and new_state == OcclusionState.FULLY_OCCLUDED
+                ):
                     self.total_occlusion_events += 1
 
                 self.current_state = new_state
@@ -211,7 +216,7 @@ class OcclusionDetector:
             OcclusionState.PARTIALLY_OCCLUDED,
         ]
 
-    def get_statistics(self) -> Dict[str, any]:
+    def get_statistics(self) -> dict[str, Any]:
         """Get occlusion statistics.
 
         Returns:
@@ -224,8 +229,7 @@ class OcclusionDetector:
             "total_occlusion_events": self.total_occlusion_events,
             "total_occluded_frames": self.total_occluded_frames,
             "occlusion_percentage": (
-                self.total_occluded_frames / total_frames * 100
-                if total_frames > 0 else 0.0
+                self.total_occluded_frames / total_frames * 100 if total_frames > 0 else 0.0
             ),
             "current_state": self.current_state.value,
         }

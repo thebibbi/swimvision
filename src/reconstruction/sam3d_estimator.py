@@ -13,18 +13,20 @@ Author: SwimVision Pro Team
 Date: 2025-01-20
 """
 
-from typing import Dict, List, Optional, Tuple, Any
+import logging
 from dataclasses import dataclass
 from pathlib import Path
+
 import numpy as np
 import torch
-import logging
 
 logger = logging.getLogger(__name__)
 
 # Check if SAM3D is available
 try:
-    from sam_3d_body import load_sam_3d_body_hf, SAM3DBodyEstimator as SAM3DEstimatorBase
+    from sam_3d_body import SAM3DBodyEstimator as SAM3DEstimatorBase
+    from sam_3d_body import load_sam_3d_body_hf
+
     SAM3D_AVAILABLE = True
 except ImportError:
     SAM3DEstimatorBase = object
@@ -37,20 +39,20 @@ class SAM3DOutput:
     """Output from SAM3D Body model."""
 
     # 3D mesh
-    vertices: np.ndarray          # (N, 3) 3D vertex positions
-    faces: np.ndarray             # (M, 3) triangle faces
+    vertices: np.ndarray  # (N, 3) 3D vertex positions
+    faces: np.ndarray  # (M, 3) triangle faces
 
     # MHR parameters
-    mhr_pose: np.ndarray          # Skeletal pose parameters
-    mhr_shape: np.ndarray         # Shape parameters
+    mhr_pose: np.ndarray  # Skeletal pose parameters
+    mhr_shape: np.ndarray  # Shape parameters
 
     # Additional outputs
-    depth: Optional[np.ndarray] = None      # (H, W) depth map
-    normals: Optional[np.ndarray] = None    # (H, W, 3) surface normals
-    mask: Optional[np.ndarray] = None       # (H, W) segmentation mask
+    depth: np.ndarray | None = None  # (H, W) depth map
+    normals: np.ndarray | None = None  # (H, W, 3) surface normals
+    mask: np.ndarray | None = None  # (H, W) segmentation mask
 
     # Joint positions
-    joints_3d: Optional[np.ndarray] = None  # (J, 3) 3D joint positions
+    joints_3d: np.ndarray | None = None  # (J, 3) 3D joint positions
 
     # Metadata
     confidence: float = 1.0
@@ -86,7 +88,7 @@ class SAM3DBodyEstimator:
     # Supported models
     MODELS = {
         "dinov3": "facebook/sam-3d-body-dinov3",  # 840M params, 54.8 MPJPE
-        "vit-h": "facebook/sam-3d-body-vit-h",    # 631M params, 54.8 MPJPE (recommended)
+        "vit-h": "facebook/sam-3d-body-vit-h",  # 631M params, 54.8 MPJPE (recommended)
     }
 
     def __init__(
@@ -94,7 +96,7 @@ class SAM3DBodyEstimator:
         model_name: str = "vit-h",
         device: str = "auto",
         use_hand_refinement: bool = True,
-        cache_dir: Optional[str] = None
+        cache_dir: str | None = None,
     ):
         """
         Initialize SAM3D Body estimator.
@@ -121,6 +123,7 @@ class SAM3DBodyEstimator:
 
         # Resolve device
         from src.utils.device_utils import get_optimal_device
+
         if device == "auto":
             self.device = get_optimal_device()
         else:
@@ -131,17 +134,13 @@ class SAM3DBodyEstimator:
 
         # Load model from Hugging Face
         try:
-            self.model, self.model_cfg = load_sam_3d_body_hf(
-                model_path,
-                cache_dir=cache_dir
-            )
+            self.model, self.model_cfg = load_sam_3d_body_hf(model_path, cache_dir=cache_dir)
             self.model = self.model.to(self.device)
             self.model.eval()
 
             # Create estimator
             self.estimator = SAM3DEstimatorBase(
-                sam_3d_body_model=self.model,
-                model_cfg=self.model_cfg
+                sam_3d_body_model=self.model, model_cfg=self.model_cfg
             )
 
             self.use_hand_refinement = use_hand_refinement
@@ -155,9 +154,9 @@ class SAM3DBodyEstimator:
     def estimate(
         self,
         image: np.ndarray,
-        keypoints_2d: Optional[np.ndarray] = None,
-        mask: Optional[np.ndarray] = None,
-        return_all: bool = True
+        keypoints_2d: np.ndarray | None = None,
+        mask: np.ndarray | None = None,
+        return_all: bool = True,
     ) -> SAM3DOutput:
         """
         Reconstruct 3D mesh from single image.
@@ -172,6 +171,7 @@ class SAM3DBodyEstimator:
             SAM3DOutput with 3D mesh and optional additional outputs
         """
         import time
+
         start_time = time.time()
 
         # Prepare image
@@ -182,10 +182,10 @@ class SAM3DBodyEstimator:
         prompts = {}
         if keypoints_2d is not None:
             # Convert COCO-17 keypoints to SAM3D format
-            prompts['keypoints'] = self._convert_keypoints_to_sam3d(keypoints_2d)
+            prompts["keypoints"] = self._convert_keypoints_to_sam3d(keypoints_2d)
 
         if mask is not None:
-            prompts['mask'] = mask
+            prompts["mask"] = mask
 
         # Run inference
         try:
@@ -196,23 +196,23 @@ class SAM3DBodyEstimator:
                     return_depth=return_all,
                     return_normals=return_all,
                     return_mask=return_all,
-                    use_hand_refinement=self.use_hand_refinement
+                    use_hand_refinement=self.use_hand_refinement,
                 )
 
             processing_time = time.time() - start_time
 
             # Parse outputs
             result = SAM3DOutput(
-                vertices=outputs['vertices'],
-                faces=outputs['faces'],
-                mhr_pose=outputs['mhr_pose'],
-                mhr_shape=outputs['mhr_shape'],
-                depth=outputs.get('depth'),
-                normals=outputs.get('normals'),
-                mask=outputs.get('mask'),
-                joints_3d=outputs.get('joints_3d'),
-                confidence=outputs.get('confidence', 1.0),
-                processing_time=processing_time
+                vertices=outputs["vertices"],
+                faces=outputs["faces"],
+                mhr_pose=outputs["mhr_pose"],
+                mhr_shape=outputs["mhr_shape"],
+                depth=outputs.get("depth"),
+                normals=outputs.get("normals"),
+                mask=outputs.get("mask"),
+                joints_3d=outputs.get("joints_3d"),
+                confidence=outputs.get("confidence", 1.0),
+                processing_time=processing_time,
             )
 
             logger.debug(f"SAM3D inference: {processing_time*1000:.1f}ms")
@@ -226,11 +226,11 @@ class SAM3DBodyEstimator:
     def process_video(
         self,
         video_path: str,
-        keypoints_sequence: Optional[List[np.ndarray]] = None,
+        keypoints_sequence: list[np.ndarray] | None = None,
         smooth_temporal: bool = True,
         batch_size: int = 1,
-        skip_frames: int = 1
-    ) -> List[SAM3DOutput]:
+        skip_frames: int = 1,
+    ) -> list[SAM3DOutput]:
         """
         Process video with 3D reconstruction.
 
@@ -295,10 +295,7 @@ class SAM3DBodyEstimator:
 
         return results
 
-    def _convert_keypoints_to_sam3d(
-        self,
-        keypoints_coco: np.ndarray
-    ) -> np.ndarray:
+    def _convert_keypoints_to_sam3d(self, keypoints_coco: np.ndarray) -> np.ndarray:
         """
         Convert COCO-17 keypoints from RTMPose to SAM3D format.
 
@@ -313,10 +310,8 @@ class SAM3DBodyEstimator:
         return keypoints_coco
 
     def _smooth_temporal(
-        self,
-        outputs: List[SAM3DOutput],
-        window_size: int = 5
-    ) -> List[SAM3DOutput]:
+        self, outputs: list[SAM3DOutput], window_size: int = 5
+    ) -> list[SAM3DOutput]:
         """
         Apply temporal smoothing to reduce mesh jitter.
 
@@ -357,7 +352,7 @@ class SAM3DBodyEstimator:
                 mask=output.mask,
                 joints_3d=output.joints_3d,
                 confidence=output.confidence,
-                processing_time=output.processing_time
+                processing_time=output.processing_time,
             )
 
             smoothed.append(smoothed_output)
@@ -367,9 +362,9 @@ class SAM3DBodyEstimator:
     def visualize_mesh(
         self,
         output: SAM3DOutput,
-        image: Optional[np.ndarray] = None,
+        image: np.ndarray | None = None,
         show_joints: bool = True,
-        show_skeleton: bool = True
+        show_skeleton: bool = True,
     ) -> np.ndarray:
         """
         Visualize 3D mesh overlaid on image.
@@ -390,12 +385,7 @@ class SAM3DBodyEstimator:
         else:
             return np.zeros((480, 640, 3), dtype=np.uint8)
 
-    def export_mesh(
-        self,
-        output: SAM3DOutput,
-        output_path: str,
-        format: str = "obj"
-    ):
+    def export_mesh(self, output: SAM3DOutput, output_path: str, format: str = "obj"):
         """
         Export 3D mesh to file.
 
@@ -406,10 +396,7 @@ class SAM3DBodyEstimator:
         """
         import trimesh
 
-        mesh = trimesh.Trimesh(
-            vertices=output.vertices,
-            faces=output.faces
-        )
+        mesh = trimesh.Trimesh(vertices=output.vertices, faces=output.faces)
 
         mesh.export(output_path, file_type=format)
         logger.info(f"Exported mesh to {output_path}")
@@ -443,7 +430,7 @@ def demo_sam3d():
     print("Running 3D reconstruction...")
     output = estimator.estimate(image_rgb)
 
-    print(f"\nResults:")
+    print("\nResults:")
     print(f"  Vertices: {output.vertices.shape}")
     print(f"  Faces: {output.faces.shape}")
     print(f"  Processing time: {output.processing_time*1000:.1f}ms")

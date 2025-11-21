@@ -136,6 +136,7 @@ warn_unused_ignores = true
 warn_no_return = true
 strict_equality = true
 ignore_missing_imports = true
+exclude = ["venv*", "build", "dist", ".+/site-packages/transformers/.*"]
 
 [[tool.mypy.overrides]]
 module = [
@@ -151,6 +152,7 @@ module = [
     "similaritymeasures.*",
     "pyrealsense2.*",
     "av.*",
+    "transformers.*",
 ]
 ignore_missing_imports = true
 

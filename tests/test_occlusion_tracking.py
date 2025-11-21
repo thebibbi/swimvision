@@ -3,9 +3,9 @@
 import numpy as np
 import pytest
 
-from src.tracking.occlusion_detector import OcclusionDetector, OcclusionState
-from src.tracking.hand_tracker import HandTracker, TrackingMethod, TrackingResult
 from src.analysis.stroke_phases import StrokePhase
+from src.tracking.hand_tracker import HandTracker, TrackingMethod, TrackingResult
+from src.tracking.occlusion_detector import OcclusionDetector, OcclusionState
 
 
 class TestOcclusionDetector:
@@ -95,9 +95,9 @@ class TestOcclusionDetector:
             detector.detect(confidence=0.1)
 
         stats = detector.get_statistics()
-        assert stats['total_frames'] == 8
-        assert stats['total_occluded_frames'] == 3
-        assert abs(stats['occlusion_percentage'] - 37.5) < 0.1
+        assert stats["total_frames"] == 8
+        assert stats["total_occluded_frames"] == 3
+        assert abs(stats["occlusion_percentage"] - 37.5) < 0.1
 
     def test_reset(self):
         """Test reset functionality."""
@@ -219,9 +219,9 @@ class TestHandTracker:
             tracker.update(None, confidence=0.1)
 
         stats = tracker.get_statistics()
-        assert stats['total_tracked_frames'] == 8
-        assert stats['predicted_frames'] == 3
-        assert stats['tracking_method'] == 'kalman_predict'
+        assert stats["total_tracked_frames"] == 8
+        assert stats["predicted_frames"] == 3
+        assert stats["tracking_method"] == "kalman_predict"
 
     def test_reset(self):
         """Test tracker reset."""
@@ -321,8 +321,8 @@ class TestTrackingIntegration:
 
         # Check statistics
         stats = tracker.get_statistics()
-        assert stats['total_occluded_frames'] > 10
-        assert stats['occlusion_percentage'] > 30
+        assert stats["total_occluded_frames"] > 10
+        assert stats["occlusion_percentage"] > 30
 
     def test_comparison_of_methods(self):
         """Compare different tracking methods on same data."""
@@ -355,7 +355,7 @@ class TestTrackingIntegration:
         for method in methods:
             tracker = HandTracker(method=method, fps=30.0)
 
-            for obs, conf in zip(observations, confidences):
+            for obs, conf in zip(observations, confidences, strict=False):
                 tracker.update(obs, conf)
 
             trajectory = tracker.get_trajectory()

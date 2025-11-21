@@ -1,7 +1,5 @@
 """Fréchet distance analysis for trajectory comparison."""
 
-from typing import List, Tuple
-
 import numpy as np
 from scipy.spatial.distance import euclidean
 from similaritymeasures import frechet_dist
@@ -41,10 +39,10 @@ class FrechetAnalyzer:
 
     def compare_hand_paths(
         self,
-        left_path1: List[Tuple[float, float]],
-        right_path1: List[Tuple[float, float]],
-        left_path2: List[Tuple[float, float]],
-        right_path2: List[Tuple[float, float]],
+        left_path1: list[tuple[float, float]],
+        right_path1: list[tuple[float, float]],
+        left_path2: list[tuple[float, float]],
+        right_path2: list[tuple[float, float]],
     ) -> dict:
         """Compare hand paths between two swimmers.
 
@@ -226,12 +224,8 @@ class FrechetAnalyzer:
 
         # Compare shape metrics
         if shape1 and shape2:
-            results["path_length_diff"] = abs(
-                shape1["path_length"] - shape2["path_length"]
-            )
-            results["efficiency_diff"] = abs(
-                shape1["path_efficiency"] - shape2["path_efficiency"]
-            )
+            results["path_length_diff"] = abs(shape1["path_length"] - shape2["path_length"])
+            results["efficiency_diff"] = abs(shape1["path_efficiency"] - shape2["path_efficiency"])
 
         # Pull pattern classification
         pattern1 = self.classify_pull_pattern(trajectory1)

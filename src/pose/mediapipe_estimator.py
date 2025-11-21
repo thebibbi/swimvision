@@ -6,19 +6,18 @@ Excellent for CPU-only environments and real-time performance.
 Install: pip install mediapipe
 """
 
-from typing import Dict, List, Optional, Tuple
-import numpy as np
 import cv2
+import numpy as np
 
 from src.pose.base_estimator import (
     BasePoseEstimator,
     KeypointFormat,
-    PoseModel,
     map_keypoints_to_coco17,
 )
 
 try:
     import mediapipe as mp
+
     MEDIAPIPE_AVAILABLE = True
 except ImportError:
     MEDIAPIPE_AVAILABLE = False
@@ -46,12 +45,12 @@ class MediaPipeEstimator(BasePoseEstimator):
             smooth_landmarks: Enable landmark smoothing.
             device: Device (MediaPipe runs on CPU).
         """
-        super().__init__(f"mediapipe_complexity_{model_complexity}", device, min_detection_confidence)
+        super().__init__(
+            f"mediapipe_complexity_{model_complexity}", device, min_detection_confidence
+        )
 
         if not MEDIAPIPE_AVAILABLE:
-            raise ImportError(
-                "MediaPipe not installed. Install with: pip install mediapipe"
-            )
+            raise ImportError("MediaPipe not installed. Install with: pip install mediapipe")
 
         self.model_complexity = model_complexity
         self.min_detection_confidence = min_detection_confidence
@@ -81,7 +80,7 @@ class MediaPipeEstimator(BasePoseEstimator):
         self,
         image: np.ndarray,
         return_image: bool = True,
-    ) -> Tuple[Optional[Dict], Optional[np.ndarray]]:
+    ) -> tuple[dict | None, np.ndarray | None]:
         """Estimate pose using MediaPipe.
 
         Args:
@@ -112,12 +111,12 @@ class MediaPipeEstimator(BasePoseEstimator):
                 annotated_image,
                 results.pose_landmarks,
                 self.mp_pose.POSE_CONNECTIONS,
-                landmark_drawing_spec=self.mp_drawing_styles.get_default_pose_landmarks_style()
+                landmark_drawing_spec=self.mp_drawing_styles.get_default_pose_landmarks_style(),
             )
 
         return pose_data, annotated_image
 
-    def _format_output(self, results, image_shape: Tuple[int, int, int]) -> Dict:
+    def _format_output(self, results, image_shape: tuple[int, int, int]) -> dict:
         """Format MediaPipe output to standard format.
 
         Args:
@@ -136,52 +135,81 @@ class MediaPipeEstimator(BasePoseEstimator):
 
         # MediaPipe has 33 landmarks
         landmark_names = [
-            'nose',
-            'left_eye_inner', 'left_eye', 'left_eye_outer',
-            'right_eye_inner', 'right_eye', 'right_eye_outer',
-            'left_ear', 'right_ear',
-            'mouth_left', 'mouth_right',
-            'left_shoulder', 'right_shoulder',
-            'left_elbow', 'right_elbow',
-            'left_wrist', 'right_wrist',
-            'left_pinky', 'right_pinky',
-            'left_index', 'right_index',
-            'left_thumb', 'right_thumb',
-            'left_hip', 'right_hip',
-            'left_knee', 'right_knee',
-            'left_ankle', 'right_ankle',
-            'left_heel', 'right_heel',
-            'left_foot_index', 'right_foot_index',
+            "nose",
+            "left_eye_inner",
+            "left_eye",
+            "left_eye_outer",
+            "right_eye_inner",
+            "right_eye",
+            "right_eye_outer",
+            "left_ear",
+            "right_ear",
+            "mouth_left",
+            "mouth_right",
+            "left_shoulder",
+            "right_shoulder",
+            "left_elbow",
+            "right_elbow",
+            "left_wrist",
+            "right_wrist",
+            "left_pinky",
+            "right_pinky",
+            "left_index",
+            "right_index",
+            "left_thumb",
+            "right_thumb",
+            "left_hip",
+            "right_hip",
+            "left_knee",
+            "right_knee",
+            "left_ankle",
+            "right_ankle",
+            "left_heel",
+            "right_heel",
+            "left_foot_index",
+            "right_foot_index",
         ]
 
-        for landmark, name in zip(landmarks, landmark_names):
+        keypoints_dict = {}
+        keypoints_array = []
+
+        for landmark, name in zip(landmarks, landmark_names, strict=False):
             # Convert normalized coordinates to pixel coordinates
             x = landmark.x * width
             y = landmark.y * height
             confidence = landmark.visibility  # MediaPipe uses visibility as confidence
 
-            keypoints.append([x, y, confidence])
+            keypoints_array.append([x, y, confidence])
             keypoint_names.append(name)
 
-        keypoints = np.array(keypoints)
+            # Build dictionary format compatible with YOLO
+            keypoints_dict[name] = {
+                "x": x,
+                "y": y,
+                "confidence": confidence,
+            }
+
+        keypoints_array = np.array(keypoints_array)
 
         # Calculate bounding box
-        bbox = self._calculate_bbox(keypoints)
+        bbox = self._calculate_bbox(keypoints_array)
 
         return {
-            'keypoints': keypoints,
-            'keypoint_names': keypoint_names,
-            'bbox': bbox,
-            'person_id': 0,  # MediaPipe is single-person
-            'format': self.get_keypoint_format(),
-            'metadata': {
-                'model': 'mediapipe',
-                'complexity': self.model_complexity,
-                'world_landmarks': self._extract_world_landmarks(results),
+            "keypoints": keypoints_dict,  # Dictionary format for compatibility
+            "keypoints_array": keypoints_array,  # Array format for legacy code
+            "keypoint_names": keypoint_names,
+            "bbox": bbox,
+            "person_id": 0,  # MediaPipe is single-person
+            "format": self.get_keypoint_format(),
+            "confidence": float(np.mean([kp["confidence"] for kp in keypoints_dict.values()])),
+            "metadata": {
+                "model": "mediapipe",
+                "complexity": self.model_complexity,
+                "world_landmarks": self._extract_world_landmarks(results),
             },
         }
 
-    def _extract_world_landmarks(self, results) -> Optional[np.ndarray]:
+    def _extract_world_landmarks(self, results) -> np.ndarray | None:
         """Extract 3D world landmarks if available.
 
         Args:
@@ -199,7 +227,7 @@ class MediaPipeEstimator(BasePoseEstimator):
 
         return np.array(world_landmarks)
 
-    def _calculate_bbox(self, keypoints: np.ndarray) -> List[float]:
+    def _calculate_bbox(self, keypoints: np.ndarray) -> list[float]:
         """Calculate bounding box from keypoints.
 
         Args:
@@ -247,7 +275,7 @@ class MediaPipeEstimator(BasePoseEstimator):
         """MediaPipe is single-person only."""
         return False
 
-    def get_3d_landmarks(self, pose_data: Dict) -> Optional[np.ndarray]:
+    def get_3d_landmarks(self, pose_data: dict) -> np.ndarray | None:
         """Get 3D world landmarks from pose data.
 
         Args:
@@ -256,9 +284,9 @@ class MediaPipeEstimator(BasePoseEstimator):
         Returns:
             3D landmarks (Nx3) or None.
         """
-        return pose_data.get('metadata', {}).get('world_landmarks')
+        return pose_data.get("metadata", {}).get("world_landmarks")
 
-    def convert_to_coco17(self, pose_data: Dict) -> Dict:
+    def convert_to_coco17(self, pose_data: dict) -> dict:
         """Convert MediaPipe landmarks to COCO-17 format.
 
         Args:
@@ -267,7 +295,7 @@ class MediaPipeEstimator(BasePoseEstimator):
         Returns:
             Pose data in COCO-17 format.
         """
-        keypoints = pose_data['keypoints']
+        keypoints = pose_data["keypoints"]
         coco17_keypoints = map_keypoints_to_coco17(
             keypoints,
             KeypointFormat.MEDIAPIPE_33,
@@ -275,22 +303,30 @@ class MediaPipeEstimator(BasePoseEstimator):
 
         return {
             **pose_data,
-            'keypoints': coco17_keypoints,
-            'keypoint_names': [
-                'nose',
-                'left_eye', 'right_eye',
-                'left_ear', 'right_ear',
-                'left_shoulder', 'right_shoulder',
-                'left_elbow', 'right_elbow',
-                'left_wrist', 'right_wrist',
-                'left_hip', 'right_hip',
-                'left_knee', 'right_knee',
-                'left_ankle', 'right_ankle',
+            "keypoints": coco17_keypoints,
+            "keypoint_names": [
+                "nose",
+                "left_eye",
+                "right_eye",
+                "left_ear",
+                "right_ear",
+                "left_shoulder",
+                "right_shoulder",
+                "left_elbow",
+                "right_elbow",
+                "left_wrist",
+                "right_wrist",
+                "left_hip",
+                "right_hip",
+                "left_knee",
+                "right_knee",
+                "left_ankle",
+                "right_ankle",
             ],
-            'format': KeypointFormat.COCO_17,
+            "format": KeypointFormat.COCO_17,
         }
 
     def __del__(self):
         """Cleanup MediaPipe resources."""
-        if hasattr(self, 'model'):
+        if hasattr(self, "model") and self.model is not None:
             self.model.close()

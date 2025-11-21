@@ -7,4 +7,4 @@ Supported models:
 - SMPL/SMPL-X - Parametric body models (future)
 """
 
-__all__ = []
+__all__: list[str] = []

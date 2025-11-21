@@ -6,17 +6,15 @@ Supports 133 keypoints (COCO-WholeBody format).
 Install: https://github.com/MVIG-SJTU/AlphaPose
 """
 
-from typing import Dict, List, Optional, Tuple
-import numpy as np
-import cv2
-from pathlib import Path
 import urllib.request
-import os
+from pathlib import Path
+
+import cv2
+import numpy as np
 
 from src.pose.base_estimator import (
     BasePoseEstimator,
     KeypointFormat,
-    PoseModel,
 )
 
 try:
@@ -25,6 +23,7 @@ try:
     from alphapose.models import builder
     from alphapose.utils.config import update_config
     from alphapose.utils.transforms import get_func_heatmap_to_coord
+
     ALPHAPOSE_AVAILABLE = True
 except ImportError:
     ALPHAPOSE_AVAILABLE = False
@@ -36,8 +35,8 @@ class AlphaPoseEstimator(BasePoseEstimator):
     def __init__(
         self,
         model_name: str = "halpe26",  # or "coco", "coco_wholebody"
-        config_path: Optional[str] = None,
-        weights_path: Optional[str] = None,
+        config_path: str | None = None,
+        weights_path: str | None = None,
         device: str = "cpu",
         confidence: float = 0.5,
     ):
@@ -54,8 +53,7 @@ class AlphaPoseEstimator(BasePoseEstimator):
 
         if not ALPHAPOSE_AVAILABLE:
             raise ImportError(
-                "AlphaPose not installed. Install from: "
-                "https://github.com/MVIG-SJTU/AlphaPose"
+                "AlphaPose not installed. Install from: " "https://github.com/MVIG-SJTU/AlphaPose"
             )
 
         self.config_path = config_path
@@ -77,7 +75,7 @@ class AlphaPoseEstimator(BasePoseEstimator):
 
         # Load weights
         if self.weights_path:
-            self.model.load_state_dict(torch.load(self.weights_path))
+            self.model.load_state_dict(torch.load(self.weights_path))  # nosec B614
         else:
             # Download pretrained weights
             self._download_weights()
@@ -92,7 +90,7 @@ class AlphaPoseEstimator(BasePoseEstimator):
         self,
         image: np.ndarray,
         return_image: bool = True,
-    ) -> Tuple[Optional[Dict], Optional[np.ndarray]]:
+    ) -> tuple[dict | None, np.ndarray | None]:
         """Estimate pose using AlphaPose.
 
         Args:
@@ -135,7 +133,7 @@ class AlphaPoseEstimator(BasePoseEstimator):
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
         # Resize to model input size (typically 256x192 or 320x256)
-        input_size = getattr(self, 'input_size', (256, 192))  # (height, width)
+        input_size = getattr(self, "input_size", (256, 192))  # (height, width)
         resized = cv2.resize(image_rgb, (input_size[1], input_size[0]))
 
         # Normalize to [0, 1]
@@ -153,7 +151,7 @@ class AlphaPoseEstimator(BasePoseEstimator):
 
         return tensor
 
-    def _format_output(self, keypoints: np.ndarray) -> Dict:
+    def _format_output(self, keypoints: np.ndarray) -> dict:
         """Format AlphaPose output to standard format.
 
         Args:
@@ -163,91 +161,130 @@ class AlphaPoseEstimator(BasePoseEstimator):
             Formatted pose data.
         """
         return {
-            'keypoints': keypoints,
-            'keypoint_names': self._get_keypoint_names(),
-            'bbox': None,  # TODO: Add bbox if available
-            'person_id': 0,
-            'format': self.get_keypoint_format(),
-            'metadata': {
-                'model': 'alphapose',
-                'variant': self.model_name,
+            "keypoints": keypoints,
+            "keypoint_names": self._get_keypoint_names(),
+            "bbox": None,  # TODO: Add bbox if available
+            "person_id": 0,
+            "format": self.get_keypoint_format(),
+            "metadata": {
+                "model": "alphapose",
+                "variant": self.model_name,
             },
         }
 
-    def _get_keypoint_names(self) -> List[str]:
+    def _get_keypoint_names(self) -> list[str]:
         """Get keypoint names for model variant."""
         # Return names based on model variant
         if self.model_name == "coco":
             # COCO 17 keypoints
             return [
-                'nose',
-                'left_eye', 'right_eye',
-                'left_ear', 'right_ear',
-                'left_shoulder', 'right_shoulder',
-                'left_elbow', 'right_elbow',
-                'left_wrist', 'right_wrist',
-                'left_hip', 'right_hip',
-                'left_knee', 'right_knee',
-                'left_ankle', 'right_ankle',
+                "nose",
+                "left_eye",
+                "right_eye",
+                "left_ear",
+                "right_ear",
+                "left_shoulder",
+                "right_shoulder",
+                "left_elbow",
+                "right_elbow",
+                "left_wrist",
+                "right_wrist",
+                "left_hip",
+                "right_hip",
+                "left_knee",
+                "right_knee",
+                "left_ankle",
+                "right_ankle",
             ]
         elif self.model_name == "halpe26":
             # Halpe 26 keypoints (full body)
             return [
-                'nose',
-                'left_eye', 'right_eye',
-                'left_ear', 'right_ear',
-                'left_shoulder', 'right_shoulder',
-                'left_elbow', 'right_elbow',
-                'left_wrist', 'right_wrist',
-                'left_hip', 'right_hip',
-                'left_knee', 'right_knee',
-                'left_ankle', 'right_ankle',
-                'head', 'neck',
-                'hip',
-                'left_big_toe', 'right_big_toe',
-                'left_small_toe', 'right_small_toe',
-                'left_heel', 'right_heel',
+                "nose",
+                "left_eye",
+                "right_eye",
+                "left_ear",
+                "right_ear",
+                "left_shoulder",
+                "right_shoulder",
+                "left_elbow",
+                "right_elbow",
+                "left_wrist",
+                "right_wrist",
+                "left_hip",
+                "right_hip",
+                "left_knee",
+                "right_knee",
+                "left_ankle",
+                "right_ankle",
+                "head",
+                "neck",
+                "hip",
+                "left_big_toe",
+                "right_big_toe",
+                "left_small_toe",
+                "right_small_toe",
+                "left_heel",
+                "right_heel",
             ]
         else:
             # COCO-WholeBody 133 keypoints (body + face + hands + feet)
             # Body (17) + Face (68) + Hands (42) + Feet (6)
             names = []
             # Body keypoints
-            names.extend([
-                'nose',
-                'left_eye', 'right_eye',
-                'left_ear', 'right_ear',
-                'left_shoulder', 'right_shoulder',
-                'left_elbow', 'right_elbow',
-                'left_wrist', 'right_wrist',
-                'left_hip', 'right_hip',
-                'left_knee', 'right_knee',
-                'left_ankle', 'right_ankle',
-            ])
+            names.extend(
+                [
+                    "nose",
+                    "left_eye",
+                    "right_eye",
+                    "left_ear",
+                    "right_ear",
+                    "left_shoulder",
+                    "right_shoulder",
+                    "left_elbow",
+                    "right_elbow",
+                    "left_wrist",
+                    "right_wrist",
+                    "left_hip",
+                    "right_hip",
+                    "left_knee",
+                    "right_knee",
+                    "left_ankle",
+                    "right_ankle",
+                ]
+            )
             # Face keypoints (68)
-            names.extend([f'face_{i}' for i in range(68)])
+            names.extend([f"face_{i}" for i in range(68)])
             # Left hand keypoints (21)
-            names.extend([f'left_hand_{i}' for i in range(21)])
+            names.extend([f"left_hand_{i}" for i in range(21)])
             # Right hand keypoints (21)
-            names.extend([f'right_hand_{i}' for i in range(21)])
+            names.extend([f"right_hand_{i}" for i in range(21)])
             # Foot keypoints (6)
-            names.extend(['left_big_toe', 'left_small_toe', 'left_heel',
-                         'right_big_toe', 'right_small_toe', 'right_heel'])
+            names.extend(
+                [
+                    "left_big_toe",
+                    "left_small_toe",
+                    "left_heel",
+                    "right_big_toe",
+                    "right_small_toe",
+                    "right_heel",
+                ]
+            )
             return names
 
     def _get_default_config(self):
         """Get default configuration."""
+
         class Config:
             MODEL = {
-                'TYPE': 'FastPose',
-                'PRETRAINED': '',
-                'NUM_JOINTS': self._get_num_joints(),
-                'IMAGE_SIZE': [256, 192],
+                "TYPE": "FastPose",
+                "PRETRAINED": "",
+                "NUM_JOINTS": self._get_num_joints(),
+                "IMAGE_SIZE": [256, 192],
             }
             DATA_PRESET = {
-                'TYPE': 'simple',
-                'HEATMAP_SIZE': [64, 48],
-                'SIGMA': 2,
+                "TYPE": "simple",
+                "HEATMAP_SIZE": [64, 48],
+                "SIGMA": 2,
             }
 
         self.input_size = (256, 192)
@@ -285,7 +322,7 @@ class AlphaPoseEstimator(BasePoseEstimator):
         if not weight_path.exists():
             print(f"Downloading AlphaPose {self.model_name} weights...")
             try:
-                urllib.request.urlretrieve(weight_urls[self.model_name], str(weight_path))
+                urllib.request.urlretrieve(weight_urls[self.model_name], str(weight_path))  # nosec B310
                 print(f"Downloaded weights to {weight_path}")
             except Exception as e:
                 print(f"Failed to download weights: {e}")
@@ -295,12 +332,12 @@ class AlphaPoseEstimator(BasePoseEstimator):
         # Load weights
         if weight_path.exists():
             try:
-                self.model.load_state_dict(torch.load(str(weight_path), map_location=self.device))
+                self.model.load_state_dict(torch.load(str(weight_path), map_location=self.device))  # nosec B614
                 print(f"Loaded weights from {weight_path}")
             except Exception as e:
                 print(f"Failed to load weights: {e}")
 
-    def _draw_keypoints(self, image: np.ndarray, pose_data: Dict) -> np.ndarray:
+    def _draw_keypoints(self, image: np.ndarray, pose_data: dict) -> np.ndarray:
         """Draw keypoints on image.
 
         Args:
@@ -310,36 +347,75 @@ class AlphaPoseEstimator(BasePoseEstimator):
         Returns:
             Annotated image.
         """
-        keypoints = pose_data['keypoints']
-        keypoint_names = pose_data['keypoint_names']
+        keypoints = pose_data["keypoints"]
+        keypoint_names = pose_data["keypoint_names"]
 
         # Define skeleton connections based on model variant
         if self.model_name == "coco" or len(keypoints) == 17:
             # COCO-17 skeleton
             skeleton = [
-                (0, 1), (0, 2), (1, 3), (2, 4),  # Head
+                (0, 1),
+                (0, 2),
+                (1, 3),
+                (2, 4),  # Head
                 (5, 6),  # Shoulders
-                (5, 7), (7, 9), (6, 8), (8, 10),  # Arms
-                (5, 11), (6, 12), (11, 12),  # Torso
-                (11, 13), (13, 15), (12, 14), (14, 16),  # Legs
+                (5, 7),
+                (7, 9),
+                (6, 8),
+                (8, 10),  # Arms
+                (5, 11),
+                (6, 12),
+                (11, 12),  # Torso
+                (11, 13),
+                (13, 15),
+                (12, 14),
+                (14, 16),  # Legs
             ]
         elif self.model_name == "halpe26":
             # Halpe-26 skeleton
             skeleton = [
-                (0, 1), (0, 2), (1, 3), (2, 4),  # Head
-                (5, 6), (5, 7), (7, 9), (6, 8), (8, 10),  # Arms
-                (5, 11), (6, 12), (11, 12),  # Torso
-                (11, 13), (13, 15), (12, 14), (14, 16),  # Legs
-                (15, 19), (15, 20), (15, 21),  # Left foot
-                (16, 22), (16, 23), (16, 24),  # Right foot
+                (0, 1),
+                (0, 2),
+                (1, 3),
+                (2, 4),  # Head
+                (5, 6),
+                (5, 7),
+                (7, 9),
+                (6, 8),
+                (8, 10),  # Arms
+                (5, 11),
+                (6, 12),
+                (11, 12),  # Torso
+                (11, 13),
+                (13, 15),
+                (12, 14),
+                (14, 16),  # Legs
+                (15, 19),
+                (15, 20),
+                (15, 21),  # Left foot
+                (16, 22),
+                (16, 23),
+                (16, 24),  # Right foot
             ]
         else:
             # Only draw body keypoints for whole-body model
             skeleton = [
-                (0, 1), (0, 2), (1, 3), (2, 4),  # Head
-                (5, 6), (5, 7), (7, 9), (6, 8), (8, 10),  # Arms
-                (5, 11), (6, 12), (11, 12),  # Torso
-                (11, 13), (13, 15), (12, 14), (14, 16),  # Legs
+                (0, 1),
+                (0, 2),
+                (1, 3),
+                (2, 4),  # Head
+                (5, 6),
+                (5, 7),
+                (7, 9),
+                (6, 8),
+                (8, 10),  # Arms
+                (5, 11),
+                (6, 12),
+                (11, 12),  # Torso
+                (11, 13),
+                (13, 15),
+                (12, 14),
+                (14, 16),  # Legs
             ]
 
         # Draw skeleton

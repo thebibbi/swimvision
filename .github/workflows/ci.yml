@@ -14,28 +14,28 @@ jobs:
     name: Lint & Format Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-          cache: 'pip'
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+        cache: pip
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install ruff mypy
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install ruff mypy
 
-      - name: Run Ruff linter
-        run: ruff check .
+    - name: Run Ruff linter
+      run: ruff check .
 
-      - name: Run Ruff formatter
-        run: ruff format --check .
+    - name: Run Ruff formatter
+      run: ruff format --check .
 
-      - name: Run MyPy type checker
-        run: mypy src/ --ignore-missing-imports
-        continue-on-error: true
+    - name: Run MyPy type checker
+      run: mypy src/ --ignore-missing-imports
+      continue-on-error: true
 
   # ========================================
   # Security Scanning
@@ -44,18 +44,18 @@ jobs:
     name: Security Scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
 
-      - name: Install Bandit
-        run: pip install bandit[toml]
+    - name: Install Bandit
+      run: pip install bandit[toml]
 
-      - name: Run Bandit security scan
-        run: bandit -r src/ -c pyproject.toml
+    - name: Run Bandit security scan
+      run: bandit -r src/ -c pyproject.toml
 
   # ========================================
   # Unit Tests
@@ -69,35 +69,35 @@ jobs:
         python-version: ['3.10', '3.11', '3.12']
 
     steps:
-      - uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-          cache: 'pip'
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: pip
 
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgl1-mesa-glx libglib2.0-0
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libgl1-mesa-glx libglib2.0-0
 
-      - name: Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt -r requirements-dev.txt
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt -r requirements-dev.txt
 
-      - name: Run tests with coverage
-        run: |
-          pytest tests/ -v --cov=src --cov-report=xml --cov-report=term
+    - name: Run tests with coverage
+      run: |
+        pytest tests/ -v --cov=src --cov-report=xml --cov-report=term
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          file: ./coverage.xml
-          flags: unittests
-          name: codecov-umbrella
-        if: matrix.python-version == '3.10'
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+      if: matrix.python-version == '3.10'
 
   # ========================================
   # Build Docker Image
@@ -109,20 +109,20 @@ jobs:
     if: github.event_name == 'push'
 
     steps:
-      - uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          target: production
-          push: false
-          tags: swimvision:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+    - name: Build Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        target: production
+        push: false
+        tags: swimvision:${{ github.sha }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
 
   # ========================================
   # Dependency Review (PRs only)
@@ -132,5 +132,5 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/dependency-review-action@v4
+    - uses: actions/checkout@v4
+    - uses: actions/dependency-review-action@v4

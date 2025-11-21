@@ -185,33 +185,33 @@ import numpy as np
 
 class BaseCamera(ABC):
     """Abstract base class for all camera types"""
-    
+
     @abstractmethod
     def initialize(self) -> bool:
         """Initialize camera hardware/connection"""
         pass
-    
+
     @abstractmethod
     def get_frame(self) -> Tuple[bool, np.ndarray]:
         """Get a single frame. Returns (success, frame)"""
         pass
-    
+
     @abstractmethod
     def stream_frames(self) -> Generator[np.ndarray, None, None]:
         """Generator that yields frames continuously"""
         pass
-    
+
     @abstractmethod
     def get_fps(self) -> float:
         """Get frames per second"""
         pass
-    
+
     @abstractmethod
     def release(self):
         """Release camera resources"""
         pass
-        
-      
+
+
  Requirements:
 
 Download and cache YOLO11n-pose, YOLO11s-pose, YOLO11m-pose models
@@ -232,7 +232,7 @@ class SwimmingKeypoints:
     Swimming-specific keypoint utilities
     Maps COCO keypoints to swimming biomechanics
     """
-    
+
     # Define swimming-relevant joint groups
     UPPER_BODY = [5, 6, 7, 8, 9, 10]  # shoulders, elbows, wrists
     LOWER_BODY = [11, 12, 13, 14, 15, 16]  # hips, knees, ankles
@@ -240,7 +240,7 @@ class SwimmingKeypoints:
     RIGHT_ARM = [6, 8, 10]
     LEFT_LEG = [11, 13, 15]
     RIGHT_LEG = [12, 14, 16]
-    
+
     @staticmethod
     def calculate_joint_angle(p1: np.ndarray, p2: np.ndarray, p3: np.ndarray) -> float:
         """
@@ -248,12 +248,12 @@ class SwimmingKeypoints:
         Returns angle in degrees
         """
         pass
-    
+
     @staticmethod
     def get_body_angles(keypoints: np.ndarray) -> Dict[str, float]:
         """
         Extract swimming-relevant angles
-        
+
         Returns: {
             'left_elbow': float,
             'right_elbow': float,
@@ -267,7 +267,7 @@ class SwimmingKeypoints:
         }
         """
         pass
-    
+
     @staticmethod
     def get_hand_path(keypoints_sequence: np.ndarray) -> np.ndarray:
         """
@@ -278,7 +278,7 @@ class SwimmingKeypoints:
             (num_frames, 2, 2) - left and right hand (x, y) over time
         """
         pass
-        
+
  Requirements:
 
 Implement angle calculations using vector math
@@ -303,28 +303,28 @@ class DTWAnalyzer:
     Dynamic Time Warping for swimming stroke comparison
     Handles multi-dimensional joint trajectories with timing variations
     """
-    
-    def __init__(self, 
+
+    def __init__(self,
                  global_constraint: str = "sakoe_chiba",
                  sakoe_chiba_radius: int = 10):
         """
         Initialize DTW analyzer
-        
+
         Args:
             global_constraint: 'sakoe_chiba' or 'itakura'
             sakoe_chiba_radius: Constraint window size
         """
         pass
-    
-    def compare_strokes(self, 
-                       stroke1: np.ndarray, 
+
+    def compare_strokes(self,
+                       stroke1: np.ndarray,
                        stroke2: np.ndarray) -> Dict:
         """
         Compare two swimming strokes using DTW
-        
+
         Args:
             stroke1, stroke2: (num_frames, num_joints, 2) arrays
-            
+
         Returns: {
             'dtw_distance': float,
             'normalized_distance': float,  # normalized by sequence length
@@ -333,18 +333,18 @@ class DTWAnalyzer:
         }
         """
         pass
-    
+
     def compute_barycenter(self, strokes: List[np.ndarray]) -> np.ndarray:
         """
         Compute average stroke template from multiple examples
         Uses soft-DTW for differentiability
         """
         pass
-    
+
     def detect_stroke_phases(self, stroke: np.ndarray) -> List[Dict]:
         """
         Detect stroke phases using DTW against phase templates
-        
+
         Returns: [{
             'phase': str,  # 'entry', 'catch', 'pull', 'push', 'recovery'
             'start_frame': int,
@@ -353,8 +353,8 @@ class DTWAnalyzer:
         }]
         """
         pass
-        
-        
+
+
    Requirements:
 
 Implement DTW with Sakoe-Chiba band constraints
@@ -378,26 +378,26 @@ class FrechetAnalyzer:
     Frechet distance for continuous movement path comparison
     Better captures the "shape" of swimming motions
     """
-    
+
     @staticmethod
     def compute_frechet_distance(path1: np.ndarray, path2: np.ndarray) -> float:
         """
         Compute discrete Frechet distance between two paths
-        
+
         Args:
             path1, path2: (num_points, 2 or 3) trajectories
-            
+
         Returns:
             Frechet distance value
         """
         pass
-    
-    def compare_hand_paths(self, 
+
+    def compare_hand_paths(self,
                           stroke1_hands: np.ndarray,
                           stroke2_hands: np.ndarray) -> Dict[str, float]:
         """
         Compare left and right hand paths separately
-        
+
         Returns: {
             'left_hand_frechet': float,
             'right_hand_frechet': float,
@@ -405,12 +405,12 @@ class FrechetAnalyzer:
         }
         """
         pass
-    
-    def analyze_stroke_trajectory_shape(self, 
+
+    def analyze_stroke_trajectory_shape(self,
                                        hand_path: np.ndarray) -> Dict:
         """
         Analyze the shape characteristics of a stroke
-        
+
         Returns: {
             'path_length': float,
             'path_efficiency': float,  # straight_line_distance / path_length
@@ -419,9 +419,9 @@ class FrechetAnalyzer:
         }
         """
         pass
-        
-        
-        
+
+
+
 Requirements:
 
 Implement discrete Frechet distance
@@ -444,18 +444,18 @@ class StrokeSimilarityAnalyzer:
     Combines multiple similarity metrics for robust comparison
     DTW for timing, Frechet for shape, sequence matching for phases
     """
-    
+
     def __init__(self):
         self.dtw_analyzer = DTWAnalyzer()
         self.frechet_analyzer = FrechetAnalyzer()
-        
+
     def comprehensive_comparison(self,
                                 swimmer_stroke: np.ndarray,
                                 ideal_stroke: np.ndarray,
                                 stroke_type: str) -> Dict:
         """
         Multi-metric stroke comparison
-        
+
         Returns: {
             'overall_score': float (0-100),
             'dtw_score': float,
@@ -473,7 +473,7 @@ class StrokeSimilarityAnalyzer:
         }
         """
         pass
-    
+
     def progressive_analysis(self,
                            session_strokes: List[np.ndarray]) -> Dict:
         """
@@ -481,8 +481,8 @@ class StrokeSimilarityAnalyzer:
         Detect fatigue-induced degradation
         """
         pass
-        
-        
+
+
 Requirements:
 
 Combine DTW, Frechet, and phase matching into unified score
@@ -506,17 +506,17 @@ class BiomechanicalFeatureExtractor:
     Extract comprehensive biomechanical features from pose sequences
     Features used for both analysis and injury prediction
     """
-    
-    def extract_stroke_features(self, 
+
+    def extract_stroke_features(self,
                                 keypoints_sequence: np.ndarray,
                                 fps: float = 30.0) -> Dict:
         """
         Extract all features from a stroke sequence
-        
+
         Args:
             keypoints_sequence: (num_frames, 17, 3) pose sequence
             fps: video frame rate
-            
+
         Returns: {
             'temporal': {
                 'stroke_rate': float,  # strokes per minute
@@ -550,13 +550,13 @@ class BiomechanicalFeatureExtractor:
         }
         """
         pass
-    
+
     def extract_injury_risk_features(self,
                                     keypoints_sequence: np.ndarray,
                                     fps: float = 30.0) -> Dict:
         """
         Extract features specifically for injury prediction
-        
+
         Returns: {
             'shoulder_risk_features': {
                 'humeral_hyperextension': float,  # critical for shoulder injury
@@ -582,8 +582,8 @@ class BiomechanicalFeatureExtractor:
         }
         """
         pass
-    
-    def smooth_trajectories(self, 
+
+    def smooth_trajectories(self,
                            trajectories: np.ndarray,
                            method: str = 'kalman') -> np.ndarray:
         """
@@ -591,13 +591,13 @@ class BiomechanicalFeatureExtractor:
         Methods: 'kalman', 'savgol', 'moving_average'
         """
         pass
-    
+
     def calculate_angular_velocity(self,
                                   angles: np.ndarray,
                                   fps: float) -> np.ndarray:
         """Calculate angular velocities from joint angles"""
         pass
-        
+
 Requirements:
 
 Implement temporal feature extraction (rates, times)
@@ -605,7 +605,7 @@ Calculate kinematic features (velocities, accelerations)
 Extract angular measurements for all major joints
 Compute symmetry metrics (critical for injury)
 Add Kalman filtering for trajectory smoothing
-Use scipy.signal for velocity/acceleration computation    
+Use scipy.signal for velocity/acceleration computation  
 ---
 
 3.2 Stroke Phase Detection
@@ -619,14 +619,14 @@ class StrokePhaseDetector:
     Detect and classify swimming stroke phases
     Uses keypoint velocities and positions
     """
-    
+
     PHASES = ['entry', 'catch', 'pull', 'push', 'recovery']
-    
-    def detect_phases_freestyle(self, 
+
+    def detect_phases_freestyle(self,
                                keypoints_sequence: np.ndarray) -> List[Dict]:
         """
         Detect phases for freestyle stroke
-        
+
         Returns: [{
             'phase': str,
             'start_frame': int,
@@ -636,7 +636,7 @@ class StrokePhaseDetector:
         }]
         """
         pass
-    
+
     def detect_cycle_boundaries(self,
                                keypoints_sequence: np.ndarray) -> List[int]:
         """
@@ -644,14 +644,14 @@ class StrokePhaseDetector:
         Returns frame indices where new cycle begins
         """
         pass
-    
+
     def validate_phase_sequence(self, phases: List[str]) -> Tuple[bool, List[str]]:
         """
         Check if detected phases follow expected sequence
         Returns (is_valid, issues)
         """
         pass
-        
+
  Requirements:
 
 Implement phase detection for freestyle (primary)
@@ -678,7 +678,7 @@ class InjuryRiskPredictor:
     Machine learning model for swimming injury prediction
     Focus on shoulder injuries (most common in swimmers)
     """
-    
+
     def __init__(self, model_path: str = None):
         """Load pre-trained model or initialize new one"""
         self.model = None
@@ -686,19 +686,19 @@ class InjuryRiskPredictor:
         self.feature_names = None
         if model_path:
             self.load_model(model_path)
-    
+
     def train_model(self,
                    X_train: pd.DataFrame,
                    y_train: np.ndarray,
                    model_type: str = 'xgboost') -> Dict:
         """
         Train injury prediction model
-        
+
         Args:
             X_train: Features (biomechanics, training load, history)
             y_train: Binary labels (0=no injury, 1=injury within 4 weeks)
             model_type: 'random_forest', 'xgboost', 'gradient_boost'
-            
+
         Returns: {
             'model': trained model,
             'cv_scores': cross-validation results,
@@ -706,13 +706,13 @@ class InjuryRiskPredictor:
         }
         """
         pass
-    
+
     def predict_risk(self,
                     features: Dict,
                     return_probability: bool = True) -> Dict:
         """
         Predict injury risk for current session
-        
+
         Returns: {
             'risk_level': str,  # 'low', 'medium', 'high'
             'probability': float,  # 0-1
@@ -722,14 +722,14 @@ class InjuryRiskPredictor:
         }
         """
         pass
-    
+
     def analyze_risk_factors(self, features: Dict) -> Dict:
         """
         Detailed analysis of what's contributing to risk
         Uses SHAP values for interpretability
         """
         pass
-    
+
 Requirements:
 
 Implement Random Forest and XGBoost classifiers
@@ -753,7 +753,7 @@ class RealTimeRiskScorer:
     Real-time injury risk assessment during swimming session
     Combines rule-based checks with ML predictions
     """
-    
+
     RISK_THRESHOLDS = {
         'shoulder_hyperextension': 45.0,  # degrees
         'elbow_angle_min': 90.0,
@@ -761,17 +761,17 @@ class RealTimeRiskScorer:
         'symmetry_deviation': 0.15,  # 15% asymmetry is concerning
         'velocity_drop': 0.20  # 20% drop indicates fatigue
     }
-    
+
     def __init__(self, predictor: InjuryRiskPredictor):
         self.predictor = predictor
         self.session_history = []
-        
-    def update(self, 
+
+    def update(self,
               stroke_features: Dict,
               biomechanics: Dict) -> Dict:
         """
         Update risk assessment with new stroke data
-        
+
         Returns: {
             'instant_risk': float (0-1),
             'session_risk': float (0-1),
@@ -781,11 +781,11 @@ class RealTimeRiskScorer:
         }
         """
         pass
-    
+
     def check_biomechanical_rules(self, biomechanics: Dict) -> List[str]:
         """
         Rule-based checks for immediate injury risk
-        
+
         Returns list of triggered warnings:
         - Excessive shoulder hyperextension
         - Dangerous elbow angles
@@ -793,14 +793,14 @@ class RealTimeRiskScorer:
         - Rapid technique degradation
         """
         pass
-    
+
     def detect_fatigue(self) -> Tuple[bool, float]:
         """
         Detect fatigue-induced form breakdown
         Returns (is_fatigued, fatigue_level)
         """
         pass
-        
+
  Requirements:
 
 Implement rule-based safety checks
@@ -832,45 +832,45 @@ st.set_page_config(
 
 class VideoProcessor(VideoTransformerBase):
     """Real-time video processing with pose estimation"""
-    
+
     def __init__(self):
         self.pose_estimator = YOLOPoseEstimator()
         self.overlay = PoseOverlay()
-        
+
     def transform(self, frame):
         img = frame.to_ndarray(format="bgr24")
-        
+
         # Estimate pose
         poses = self.pose_estimator.estimate_pose(img)
-        
+
         # Draw overlay
         img = self.overlay.draw_skeleton(img, poses)
-        
+
         return img
 
 def main():
     st.title("🏊 SwimVision Pro")
     st.markdown("Real-time swimming technique analysis and injury prevention")
-    
+
     # Sidebar
     with st.sidebar:
         st.header("Settings")
         mode = st.radio("Mode", ["Live Camera", "Upload Video", "Compare"])
-        stroke_type = st.selectbox("Stroke Type", 
+        stroke_type = st.selectbox("Stroke Type",
                                    ["Freestyle", "Backstroke", "Breaststroke", "Butterfly"])
-        
+
         st.header("Analysis Options")
         show_skeleton = st.checkbox("Show Skeleton", value=True)
         show_angles = st.checkbox("Show Joint Angles", value=True)
         show_metrics = st.checkbox("Show Metrics", value=True)
-        
+
         st.header("Thresholds")
         confidence = st.slider("Detection Confidence", 0.0, 1.0, 0.5)
-    
+
     # Main area
     if mode == "Live Camera":
         col1, col2 = st.columns([2, 1])
-        
+
         with col1:
             st.subheader("Live Feed")
             webrtc_streamer(
@@ -878,51 +878,51 @@ def main():
                 video_processor_factory=VideoProcessor,
                 rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
             )
-        
+
         with col2:
             st.subheader("Real-time Metrics")
             # Metrics display (placeholders)
             st.metric("Stroke Rate", "32 SPM")
             st.metric("Technique Score", "85/100")
             st.metric("Injury Risk", "Low", delta="-5%")
-    
+
     elif mode == "Upload Video":
         uploaded_file = st.file_uploader("Choose video", type=['mp4', 'avi', 'mov'])
-        
+
         if uploaded_file:
             # Process uploaded video
             col1, col2 = st.columns(2)
-            
+
             with col1:
                 st.subheader("Original")
                 st.video(uploaded_file)
-            
+
             with col2:
                 st.subheader("Analysis")
                 # Show processed video with overlay
                 process_btn = st.button("Analyze Video")
-    
+
     elif mode == "Compare":
         st.subheader("Compare with Ideal Technique")
-        
+
         col1, col2 = st.columns(2)
-        
+
         with col1:
             st.markdown("**Your Stroke**")
             user_video = st.file_uploader("Upload your video", type=['mp4'])
-        
+
         with col2:
             st.markdown("**Ideal Technique**")
             ideal = st.selectbox("Select reference", ["Elite Freestyle", "Elite Backstroke"])
-        
+
         if st.button("Compare"):
             # Run comparison analysis
             pass
 
 if __name__ == "__main__":
     main()
-    
-    
+
+
     Requirements:
 
 Implement three main modes: Live, Upload, Compare
@@ -945,50 +945,50 @@ class PoseOverlay:
     """
     Draw pose estimation results on video frames
     """
-    
+
     # COCO skeleton connections
     SKELETON_CONNECTIONS = [
         (5, 6), (5, 7), (7, 9), (6, 8), (8, 10),  # arms
         (5, 11), (6, 12), (11, 12),  # torso
         (11, 13), (13, 15), (12, 14), (14, 16)  # legs
     ]
-    
+
     COLORS = {
         'skeleton': (0, 255, 0),
         'keypoints': (0, 0, 255),
         'left_side': (255, 0, 0),
         'right_side': (0, 255, 255)
     }
-    
+
     def draw_skeleton(self,
                      frame: np.ndarray,
                      poses: List[Dict],
                      show_confidence: bool = False) -> np.ndarray:
         """
         Draw skeleton overlay on frame
-        
+
         Args:
             frame: RGB image
             poses: List of detected poses
             show_confidence: Display confidence scores
         """
         pass
-    
+
     def draw_angles(self,
                    frame: np.ndarray,
                    angles: Dict[str, float],
                    keypoints: np.ndarray) -> np.ndarray:
         """Draw joint angles on frame"""
         pass
-    
+
     def draw_trajectory(self,
                        frame: np.ndarray,
                        trajectory: np.ndarray,
                        color: tuple = (255, 0, 0)) -> np.ndarray:
         """Draw hand/foot trajectory path"""
         pass
-        
-        
+
+
 5.3 Metrics Dashboard
 File: src/visualization/metrics_dashboard.py
 
@@ -1000,7 +1000,7 @@ class MetricsDashboard:
     """
     Create interactive visualizations for swimming metrics
     """
-    
+
     def create_stroke_comparison_chart(self,
                                       swimmer_data: Dict,
                                       ideal_data: Dict) -> go.Figure:
@@ -1009,7 +1009,7 @@ class MetricsDashboard:
         Metrics: timing, power, efficiency, form, symmetry
         """
         pass
-    
+
     def create_session_progress_chart(self,
                                      session_metrics: List[Dict]) -> go.Figure:
         """
@@ -1017,16 +1017,16 @@ class MetricsDashboard:
         Detect fatigue patterns
         """
         pass
-    
+
     def create_injury_risk_gauge(self, risk_score: float) -> go.Figure:
         """Gauge chart for injury risk level"""
         pass
-    
+
     def create_angle_timeline(self,
                             angles_sequence: Dict[str, List[float]]) -> go.Figure:
         """Timeline of joint angles through stroke"""
         pass
-        
+
 Requirements:
 
 Interactive Plotly charts
@@ -1049,32 +1049,32 @@ class SpaghettaDiagram:
     Movement path visualization for pool utilization
     Similar to lean manufacturing spaghetti diagrams
     """
-    
+
     def __init__(self, pool_dimensions: tuple = (50, 25)):
         """
         Args:
             pool_dimensions: (length, width) in meters
         """
         self.pool_dims = pool_dimensions
-        
+
     def create_diagram(self,
                       trajectories: List[np.ndarray],
                       lane_width: float = 2.5) -> np.ndarray:
         """
         Create spaghetti diagram showing swimmer paths
-        
+
         Args:
             trajectories: List of (num_frames, 2) position arrays
-        
+
         Returns:
             Diagram image
         """
         pass
-    
+
     def analyze_lane_usage(self, trajectory: np.ndarray) -> Dict:
         """
         Analyze how efficiently swimmer uses lane
-        
+
         Returns: {
             'lane_deviation': float,  # meters from center
             'turn_efficiency': float,
@@ -1082,7 +1082,7 @@ class SpaghettaDiagram:
         }
         """
         pass
-        
+
   Phase 6: Data Management & Reports (Week 6)
 6.1 Database Schema
 File: src/data/database.py
@@ -1096,19 +1096,19 @@ Base = declarative_base()
 
 class Swimmer(Base):
     __tablename__ = 'swimmers'
-    
+
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
     age = Column(Integer)
     gender = Column(String)
     experience_level = Column(String)  # beginner, intermediate, elite
     injury_history = Column(JSON)
-    
+
     sessions = relationship("TrainingSession", back_populates="swimmer")
 
 class TrainingSession(Base):
     __tablename__ = 'training_sessions'
-    
+
     id = Column(Integer, primary_key=True)
     swimmer_id = Column(Integer, ForeignKey('swimmers.id'))
     session_date = Column(DateTime, default=datetime.datetime.utcnow)
@@ -1116,45 +1116,45 @@ class TrainingSession(Base):
     video_path = Column(String)
     duration_minutes = Column(Float)
     total_strokes = Column(Integer)
-    
+
     swimmer = relationship("Swimmer", back_populates="sessions")
     strokes = relationship("StrokeAnalysis", back_populates="session")
     metrics = relationship("SessionMetrics", back_populates="session")
 
 class StrokeAnalysis(Base):
     __tablename__ = 'stroke_analysis'
-    
+
     id = Column(Integer, primary_key=True)
     session_id = Column(Integer, ForeignKey('training_sessions.id'))
     stroke_number = Column(Integer)
     timestamp = Column(Float)
-    
+
     # Pose data
     keypoints_data = Column(JSON)  # Serialized pose sequence
-    
+
     # Metrics
     stroke_rate = Column(Float)
     technique_score = Column(Float)
     dtw_distance_to_ideal = Column(Float)
-    
+
     # Biomechanics
     biomechanical_features = Column(JSON)
-    
+
     session = relationship("TrainingSession", back_populates="strokes")
 
 class InjuryRiskAssessment(Base):
     __tablename__ = 'injury_assessments'
-    
+
     id = Column(Integer, primary_key=True)
     session_id = Column(Integer, ForeignKey('training_sessions.id'))
     assessment_time = Column(DateTime, default=datetime.datetime.utcnow)
-    
+
     risk_level = Column(String)  # low, medium, high
     risk_probability = Column(Float)
     contributing_factors = Column(JSON)
     recommendations = Column(JSON)
-    
-    
+
+
     Requirements:
 
 SQLite for local development
@@ -1178,13 +1178,13 @@ class ReportGenerator:
     """
     Generate PDF analysis reports for swimmers and coaches
     """
-    
+
     def generate_session_report(self,
                                 session_data: Dict,
                                 output_path: str):
         """
         Create comprehensive session report
-        
+
         Includes:
         - Summary statistics
         - Technique comparison charts
@@ -1193,7 +1193,7 @@ class ReportGenerator:
         - Personalized recommendations
         """
         pass
-    
+
     def generate_progress_report(self,
                                 swimmer_id: int,
                                 date_range: tuple,
@@ -1203,8 +1203,8 @@ class ReportGenerator:
         Shows improvement trends over time
         """
         pass
-        
-        
+
+
 from typing import Dict
 import matplotlib.pyplot as plt
 from reportlab.lib.pagesizes import letter
@@ -1214,13 +1214,13 @@ class ReportGenerator:
     """
     Generate PDF analysis reports for swimmers and coaches
     """
-    
+
     def generate_session_report(self,
                                 session_data: Dict,
                                 output_path: str):
         """
         Create comprehensive session report
-        
+
         Includes:
         - Summary statistics
         - Technique comparison charts
@@ -1229,7 +1229,7 @@ class ReportGenerator:
         - Personalized recommendations
         """
         pass
-    
+
     def generate_progress_report(self,
                                 swimmer_id: int,
                                 date_range: tuple,
@@ -1239,7 +1239,7 @@ class ReportGenerator:
         Shows improvement trends over time
         """
         pass
-        
+
  Testing Requirements
 Create tests for:
 

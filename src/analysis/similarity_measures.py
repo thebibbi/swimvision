@@ -1,10 +1,8 @@
 """Additional similarity measures for time series comparison."""
 
-from typing import Tuple
-
 import numpy as np
-from scipy.spatial.distance import cosine, euclidean
 from scipy.signal import correlate
+from scipy.spatial.distance import cosine, euclidean
 
 
 class SoftDTW:
@@ -50,9 +48,7 @@ class SoftDTW:
         for i in range(1, n + 1):
             for j in range(1, m + 1):
                 cost = dist_matrix[i - 1, j - 1]
-                dp[i, j] = cost + self._soft_min(
-                    dp[i - 1, j], dp[i, j - 1], dp[i - 1, j - 1]
-                )
+                dp[i, j] = cost + self._soft_min(dp[i - 1, j], dp[i, j - 1], dp[i - 1, j - 1])
 
         return float(dp[n, m])
 
@@ -75,9 +71,7 @@ class SoftDTW:
 
         return float(soft_min)
 
-    def _pairwise_distances(
-        self, sequence1: np.ndarray, sequence2: np.ndarray
-    ) -> np.ndarray:
+    def _pairwise_distances(self, sequence1: np.ndarray, sequence2: np.ndarray) -> np.ndarray:
         """Compute pairwise Euclidean distances.
 
         Args:
@@ -262,7 +256,7 @@ class CrossCorrelationAnalyzer:
     def find_best_alignment(
         sequence1: np.ndarray,
         sequence2: np.ndarray,
-    ) -> Tuple[int, float]:
+    ) -> tuple[int, float]:
         """Find optimal time shift for alignment.
 
         Args:
@@ -300,9 +294,7 @@ class CrossCorrelationAnalyzer:
         Returns:
             Maximum correlation coefficient (0-1).
         """
-        _, max_corr = CrossCorrelationAnalyzer.find_best_alignment(
-            sequence1, sequence2
-        )
+        _, max_corr = CrossCorrelationAnalyzer.find_best_alignment(sequence1, sequence2)
 
         # Normalize to [0, 1]
         return (max_corr + 1.0) / 2.0

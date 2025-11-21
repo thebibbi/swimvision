@@ -6,19 +6,12 @@ Author: SwimVision Pro Team
 Date: 2025-01-20
 """
 
-import pytest
-import numpy as np
 import cv2
-from pathlib import Path
-import tempfile
+import numpy as np
+import pytest
 
 # Pipeline components
-from src.pipeline.orchestrator import (
-    SwimVisionPipeline,
-    PipelineConfig,
-    ProcessingMode
-)
-from src.pose.rtmpose_estimator import RTMPoseEstimator
+from src.pipeline.orchestrator import PipelineConfig, ProcessingMode, SwimVisionPipeline
 from src.tracking.bytetrack_tracker import ByteTrackTracker, Detection
 from src.utils.format_converters import FormatConverter
 
@@ -40,9 +33,7 @@ class TestFormatConverters:
 
         # Check that direct mappings preserve data
         # Left shoulder: COCO[5] -> SMPL[16]
-        np.testing.assert_array_almost_equal(
-            smpl_kpts[16], coco_kpts[5]
-        )
+        np.testing.assert_array_almost_equal(smpl_kpts[16], coco_kpts[5])
 
     def test_smpl24_to_coco17(self):
         """Test SMPL-24 to COCO-17 conversion."""
@@ -60,13 +51,13 @@ class TestFormatConverters:
         markers = FormatConverter.smpl24_to_opensim_markers(smpl_kpts)
 
         # Check that we have required markers
-        assert 'pelvis' in markers
-        assert 'l_shoulder' in markers
-        assert 'r_shoulder' in markers
+        assert "pelvis" in markers
+        assert "l_shoulder" in markers
+        assert "r_shoulder" in markers
         assert len(markers) >= 30, "Should have 30+ markers"
 
         # Check marker format
-        assert markers['pelvis'].shape == (3,)
+        assert markers["pelvis"].shape == (3,)
 
     def test_bidirectional_conversion(self):
         """Test COCO -> SMPL -> COCO roundtrip."""
@@ -79,12 +70,8 @@ class TestFormatConverters:
 
         # Direct mappings should be preserved
         # Check shoulders (COCO[5,6] = SMPL[16,17])
-        np.testing.assert_array_almost_equal(
-            recovered_coco[5], original_coco[5], decimal=5
-        )
-        np.testing.assert_array_almost_equal(
-            recovered_coco[6], original_coco[6], decimal=5
-        )
+        np.testing.assert_array_almost_equal(recovered_coco[5], original_coco[5], decimal=5)
+        np.testing.assert_array_almost_equal(recovered_coco[6], original_coco[6], decimal=5)
 
     def test_convert_format_routing(self):
         """Test generic convert_format function."""
@@ -107,11 +94,7 @@ class TestByteTrackTracker:
 
     def test_tracker_initialization(self):
         """Test tracker can be initialized."""
-        tracker = ByteTrackTracker(
-            track_thresh=0.5,
-            match_thresh=0.7,
-            max_time_lost=30
-        )
+        tracker = ByteTrackTracker(track_thresh=0.5, match_thresh=0.7, max_time_lost=30)
         assert tracker is not None
         assert len(tracker.tracked_tracks) == 0
 
@@ -124,7 +107,7 @@ class TestByteTrackTracker:
             bbox=np.array([100, 100, 200, 200]),
             score=0.9,
             class_id=0,
-            keypoints=np.random.rand(17, 3)
+            keypoints=np.random.rand(17, 3),
         )
 
         # Update tracker
@@ -139,21 +122,9 @@ class TestByteTrackTracker:
 
         # Create multiple detections
         detections = [
-            Detection(
-                bbox=np.array([50, 50, 150, 150]),
-                score=0.9,
-                class_id=0
-            ),
-            Detection(
-                bbox=np.array([200, 200, 300, 300]),
-                score=0.85,
-                class_id=0
-            ),
-            Detection(
-                bbox=np.array([350, 100, 450, 200]),
-                score=0.8,
-                class_id=0
-            )
+            Detection(bbox=np.array([50, 50, 150, 150]), score=0.9, class_id=0),
+            Detection(bbox=np.array([200, 200, 300, 300]), score=0.85, class_id=0),
+            Detection(bbox=np.array([350, 100, 450, 200]), score=0.8, class_id=0),
         ]
 
         tracks = tracker.update(detections, frame_id=0)
@@ -167,11 +138,7 @@ class TestByteTrackTracker:
         tracker = ByteTrackTracker()
 
         # Frame 0: Create track
-        det1 = Detection(
-            bbox=np.array([100, 100, 200, 200]),
-            score=0.9,
-            class_id=0
-        )
+        det1 = Detection(bbox=np.array([100, 100, 200, 200]), score=0.9, class_id=0)
         tracks_0 = tracker.update([det1], frame_id=0)
         track_id = tracks_0[0].track_id
 
@@ -179,7 +146,7 @@ class TestByteTrackTracker:
         det2 = Detection(
             bbox=np.array([105, 105, 205, 205]),  # Slightly moved
             score=0.9,
-            class_id=0
+            class_id=0,
         )
         tracks_1 = tracker.update([det2], frame_id=1)
 
@@ -191,11 +158,7 @@ class TestByteTrackTracker:
         tracker = ByteTrackTracker(max_time_lost=5)
 
         # Create initial track
-        det = Detection(
-            bbox=np.array([100, 100, 200, 200]),
-            score=0.9,
-            class_id=0
-        )
+        det = Detection(bbox=np.array([100, 100, 200, 200]), score=0.9, class_id=0)
         tracks_0 = tracker.update([det], frame_id=0)
         track_id = tracks_0[0].track_id
 
@@ -230,7 +193,7 @@ class TestPipelineOrchestrator:
             pose_models=["rtmpose-m"],
             enable_tracking=True,
             mode=ProcessingMode.REALTIME,
-            device="cpu"  # Use CPU for testing
+            device="cpu",  # Use CPU for testing
         )
 
         try:
@@ -247,7 +210,7 @@ class TestPipelineOrchestrator:
             pose_models=["rtmpose-m"],
             enable_tracking=False,  # Disable tracking for simpler test
             visualize=False,
-            device="cpu"
+            device="cpu",
         )
 
         try:
@@ -266,10 +229,7 @@ class TestPipelineOrchestrator:
     def test_pipeline_with_tracking(self, sample_frame):
         """Test pipeline with tracking enabled."""
         config = PipelineConfig(
-            pose_models=["rtmpose-m"],
-            enable_tracking=True,
-            visualize=False,
-            device="cpu"
+            pose_models=["rtmpose-m"], enable_tracking=True, visualize=False, device="cpu"
         )
 
         try:
@@ -282,7 +242,7 @@ class TestPipelineOrchestrator:
 
             # Check statistics
             stats = pipeline.get_statistics()
-            assert stats['total_frames'] == 5
+            assert stats["total_frames"] == 5
 
         except Exception as e:
             pytest.skip(f"Tracking test failed (dependencies not installed): {e}")
@@ -293,7 +253,7 @@ class TestPipelineOrchestrator:
             pose_models=["rtmpose-m"],
             output_formats=["coco17", "smpl24", "opensim"],
             visualize=False,
-            device="cpu"
+            device="cpu",
         )
 
         try:
@@ -310,11 +270,7 @@ class TestPipelineOrchestrator:
 
     def test_pipeline_reset(self, sample_frame):
         """Test pipeline reset."""
-        config = PipelineConfig(
-            pose_models=["rtmpose-m"],
-            enable_tracking=True,
-            device="cpu"
-        )
+        config = PipelineConfig(pose_models=["rtmpose-m"], enable_tracking=True, device="cpu")
 
         try:
             pipeline = SwimVisionPipeline(config)
@@ -356,7 +312,7 @@ class TestPhase1Integration:
             enable_tracking=True,
             output_formats=["coco17", "smpl24"],
             visualize=True,
-            device="cpu"
+            device="cpu",
         )
 
         try:
@@ -376,7 +332,7 @@ class TestPhase1Integration:
             track_ids_per_frame = []
             for result in results:
                 if result.tracked_swimmers:
-                    ids = [s['track_id'] for s in result.tracked_swimmers]
+                    ids = [s["track_id"] for s in result.tracked_swimmers]
                     track_ids_per_frame.append(ids)
 
             # If tracking worked, we should see consistent track IDs
@@ -385,11 +341,11 @@ class TestPhase1Integration:
 
             # Get statistics
             stats = pipeline.get_statistics()
-            print(f"\nPipeline Statistics:")
+            print("\nPipeline Statistics:")
             for key, value in stats.items():
                 print(f"  {key}: {value}")
 
-            assert stats['total_frames'] == 10
+            assert stats["total_frames"] == 10
 
         except Exception as e:
             pytest.skip(f"Integration test failed (dependencies not installed): {e}")
@@ -398,10 +354,11 @@ class TestPhase1Integration:
 def test_phase1_components_available():
     """Test that all Phase 1 components can be imported."""
     try:
+        from src.pipeline.orchestrator import SwimVisionPipeline
         from src.pose.rtmpose_estimator import RTMPoseEstimator
         from src.tracking.bytetrack_tracker import ByteTrackTracker
         from src.utils.format_converters import FormatConverter
-        from src.pipeline.orchestrator import SwimVisionPipeline
+
         print("✅ All Phase 1 components successfully imported")
     except ImportError as e:
         pytest.fail(f"Failed to import Phase 1 components: {e}")

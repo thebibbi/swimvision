@@ -1,7 +1,6 @@
 """Stroke phase detection for swimming analysis."""
 
 from enum import Enum
-from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 from scipy.signal import find_peaks
@@ -24,8 +23,8 @@ class StrokePhaseDetector:
 
     def __init__(
         self,
-        velocity_threshold: Optional[float] = None,
-        min_phase_duration: Optional[float] = None,
+        velocity_threshold: float | None = None,
+        min_phase_duration: float | None = None,
     ):
         """Initialize stroke phase detector.
 
@@ -53,7 +52,7 @@ class StrokePhaseDetector:
         hand_positions: np.ndarray,
         fps: float,
         side: str = "right",
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """Detect freestyle stroke phases from hand trajectory.
 
         Args:
@@ -74,15 +73,11 @@ class StrokePhaseDetector:
         y_positions = hand_positions[:, 1]
 
         # Detect phase transitions
-        phases = self._detect_phase_transitions(
-            hand_positions, velocities, y_positions, fps
-        )
+        phases = self._detect_phase_transitions(hand_positions, velocities, y_positions, fps)
 
         return phases
 
-    def _calculate_velocities(
-        self, positions: np.ndarray, fps: float
-    ) -> np.ndarray:
+    def _calculate_velocities(self, positions: np.ndarray, fps: float) -> np.ndarray:
         """Calculate velocity magnitude over time.
 
         Args:
@@ -140,7 +135,7 @@ class StrokePhaseDetector:
         velocities: np.ndarray,
         y_positions: np.ndarray,
         fps: float,
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """Detect phase transitions based on kinematics.
 
         Args:
@@ -252,7 +247,7 @@ class StrokePhaseDetector:
         self,
         hand_positions: np.ndarray,
         fps: float,
-    ) -> List[Tuple[int, int]]:
+    ) -> list[tuple[int, int]]:
         """Detect stroke cycle boundaries (start and end of each stroke).
 
         Args:
@@ -279,7 +274,7 @@ class StrokePhaseDetector:
 
         return cycles
 
-    def validate_phase_sequence(self, phases: List[Dict]) -> bool:
+    def validate_phase_sequence(self, phases: list[dict]) -> bool:
         """Validate that phase sequence is logical.
 
         Args:
@@ -319,7 +314,7 @@ class StrokePhaseDetector:
 
         return True
 
-    def get_phase_durations(self, phases: List[Dict]) -> Dict[str, float]:
+    def get_phase_durations(self, phases: list[dict]) -> dict[str, float]:
         """Calculate average duration for each phase.
 
         Args:
@@ -331,9 +326,7 @@ class StrokePhaseDetector:
         durations = {}
 
         for phase_type in StrokePhase:
-            matching_phases = [
-                p for p in phases if p["phase"] == phase_type
-            ]
+            matching_phases = [p for p in phases if p["phase"] == phase_type]
 
             if matching_phases:
                 avg_duration = np.mean([p["duration"] for p in matching_phases])
@@ -343,9 +336,9 @@ class StrokePhaseDetector:
 
     def analyze_phase_timing(
         self,
-        phases_left: List[Dict],
-        phases_right: List[Dict],
-    ) -> Dict:
+        phases_left: list[dict],
+        phases_right: list[dict],
+    ) -> dict:
         """Analyze timing coordination between left and right arms.
 
         Args:
@@ -360,12 +353,8 @@ class StrokePhaseDetector:
         # Calculate phase overlap
         if phases_left and phases_right:
             # Find pull phases
-            left_pulls = [
-                p for p in phases_left if p["phase"] == StrokePhase.PULL
-            ]
-            right_pulls = [
-                p for p in phases_right if p["phase"] == StrokePhase.PULL
-            ]
+            left_pulls = [p for p in phases_left if p["phase"] == StrokePhase.PULL]
+            right_pulls = [p for p in phases_right if p["phase"] == StrokePhase.PULL]
 
             if left_pulls and right_pulls:
                 # Check if pulls overlap (should be alternating)

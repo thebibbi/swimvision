@@ -7,47 +7,50 @@ Combines pose estimates from multiple synchronized cameras to:
 - Validate predictions using epipolar geometry
 """
 
-from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
-import numpy as np
-import cv2
 
-from src.pose.base_estimator import BasePoseEstimator, KeypointFormat
+import cv2
+import numpy as np
+
+from src.pose.base_estimator import KeypointFormat
 
 
 @dataclass
 class CameraParameters:
     """Camera calibration parameters."""
-    camera_id: str                              # Unique camera identifier
-    intrinsic_matrix: np.ndarray                # 3x3 camera intrinsic matrix (K)
-    distortion_coeffs: np.ndarray               # Distortion coefficients
-    rotation_matrix: np.ndarray                 # 3x3 rotation matrix (world to camera)
-    translation_vector: np.ndarray              # 3x1 translation vector
-    resolution: Tuple[int, int]                 # (width, height)
-    position: str = "overhead"                  # Camera position description
+
+    camera_id: str  # Unique camera identifier
+    intrinsic_matrix: np.ndarray  # 3x3 camera intrinsic matrix (K)
+    distortion_coeffs: np.ndarray  # Distortion coefficients
+    rotation_matrix: np.ndarray  # 3x3 rotation matrix (world to camera)
+    translation_vector: np.ndarray  # 3x1 translation vector
+    resolution: tuple[int, int]  # (width, height)
+    position: str = "overhead"  # Camera position description
 
 
 @dataclass
 class MultiCameraDetection:
     """Detection from a single camera."""
-    camera_id: str                              # Source camera ID
-    keypoints_2d: np.ndarray                    # 2D keypoints (Nx3)
-    keypoint_names: List[str]                   # Keypoint names
-    confidence: float                           # Overall detection confidence
-    timestamp: float                            # Detection timestamp
-    metadata: Dict                              # Additional metadata
+
+    camera_id: str  # Source camera ID
+    keypoints_2d: np.ndarray  # 2D keypoints (Nx3)
+    keypoint_names: list[str]  # Keypoint names
+    confidence: float  # Overall detection confidence
+    timestamp: float  # Detection timestamp
+    metadata: dict  # Additional metadata
 
 
 @dataclass
 class Fused3DPose:
     """Fused 3D pose from multiple cameras."""
-    keypoints_3d: np.ndarray                    # 3D keypoints (Nx4: x, y, z, confidence)
-    keypoint_names: List[str]                   # Keypoint names
-    contributing_cameras: List[str]             # Cameras that contributed
-    reprojection_errors: Dict[str, float]       # Reprojection error per camera
-    triangulation_quality: np.ndarray           # Quality score per keypoint
-    format: KeypointFormat                      # Keypoint format
-    metadata: Dict                              # Additional metadata
+
+    keypoints_3d: np.ndarray  # 3D keypoints (Nx4: x, y, z, confidence)
+    keypoint_names: list[str]  # Keypoint names
+    contributing_cameras: list[str]  # Cameras that contributed
+    reprojection_errors: dict[str, float]  # Reprojection error per camera
+    triangulation_quality: np.ndarray  # Quality score per keypoint
+    format: KeypointFormat  # Keypoint format
+    metadata: dict  # Additional metadata
 
 
 class MultiCameraFusion:
@@ -55,7 +58,7 @@ class MultiCameraFusion:
 
     def __init__(
         self,
-        cameras: List[CameraParameters],
+        cameras: list[CameraParameters],
         min_cameras: int = 2,
         max_reprojection_error: float = 10.0,
         confidence_threshold: float = 0.3,
@@ -80,8 +83,8 @@ class MultiCameraFusion:
 
     def fuse_detections(
         self,
-        detections: List[MultiCameraDetection],
-    ) -> Optional[Fused3DPose]:
+        detections: list[MultiCameraDetection],
+    ) -> Fused3DPose | None:
         """Fuse 2D detections from multiple cameras into 3D pose.
 
         Args:
@@ -124,12 +127,14 @@ class MultiCameraFusion:
 
                 if point_3d is not None:
                     # Calculate confidence from quality and 2D confidences
-                    avg_2d_conf = np.mean([
-                        detection.keypoints_2d[kp_idx][2]
-                        for detection in detections
-                        if kp_idx < len(detection.keypoints_2d) and
-                        detection.keypoints_2d[kp_idx][2] > self.confidence_threshold
-                    ])
+                    avg_2d_conf = np.mean(
+                        [
+                            detection.keypoints_2d[kp_idx][2]
+                            for detection in detections
+                            if kp_idx < len(detection.keypoints_2d)
+                            and detection.keypoints_2d[kp_idx][2] > self.confidence_threshold
+                        ]
+                    )
 
                     confidence = quality * avg_2d_conf
 
@@ -137,7 +142,7 @@ class MultiCameraFusion:
                     triangulation_quality[kp_idx] = quality
 
                     # Store reprojection errors
-                    for cam_id, error in zip(camera_ids, reproj_errors):
+                    for cam_id, error in zip(camera_ids, reproj_errors, strict=False):
                         reprojection_errors[cam_id].append(error)
 
         # Calculate average reprojection errors
@@ -154,17 +159,17 @@ class MultiCameraFusion:
             triangulation_quality=triangulation_quality,
             format=KeypointFormat.COCO_17,  # Assuming COCO format
             metadata={
-                'num_cameras': len(detections),
-                'min_cameras_used': self.min_cameras,
-                'avg_quality': float(np.mean(triangulation_quality)),
+                "num_cameras": len(detections),
+                "min_cameras_used": self.min_cameras,
+                "avg_quality": float(np.mean(triangulation_quality)),
             },
         )
 
     def _triangulate_point(
         self,
-        observations: List[np.ndarray],
-        camera_ids: List[str],
-    ) -> Tuple[Optional[np.ndarray], float, List[float]]:
+        observations: list[np.ndarray],
+        camera_ids: list[str],
+    ) -> tuple[np.ndarray | None, float, list[float]]:
         """Triangulate 3D point from multiple 2D observations.
 
         Args:
@@ -181,7 +186,7 @@ class MultiCameraFusion:
         A = []
         projection_matrices = []
 
-        for obs, cam_id in zip(observations, camera_ids):
+        for obs, cam_id in zip(observations, camera_ids, strict=False):
             P = self.projection_matrices[cam_id]
             projection_matrices.append(P)
 
@@ -202,7 +207,7 @@ class MultiCameraFusion:
 
         # Calculate reprojection errors
         reproj_errors = []
-        for obs, P in zip(observations, projection_matrices):
+        for obs, P in zip(observations, projection_matrices, strict=False):
             # Project 3D point back to 2D
             point_2d_proj = self._project_point(point_3d, P)
 
@@ -268,7 +273,7 @@ class MultiCameraFusion:
         self,
         detection1: MultiCameraDetection,
         detection2: MultiCameraDetection,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Validate detections using epipolar geometry.
 
         Args:
@@ -347,17 +352,19 @@ class MultiCameraFusion:
         Returns:
             3x3 skew-symmetric matrix.
         """
-        return np.array([
-            [0, -v[2], v[1]],
-            [v[2], 0, -v[0]],
-            [-v[1], v[0], 0],
-        ])
+        return np.array(
+            [
+                [0, -v[2], v[1]],
+                [v[2], 0, -v[0]],
+                [-v[1], v[0], 0],
+            ]
+        )
 
     def synchronize_detections(
         self,
-        all_detections: List[List[MultiCameraDetection]],
+        all_detections: list[list[MultiCameraDetection]],
         time_threshold: float = 0.033,  # ~1 frame at 30fps
-    ) -> List[List[MultiCameraDetection]]:
+    ) -> list[list[MultiCameraDetection]]:
         """Synchronize detections from multiple cameras by timestamp.
 
         Args:
@@ -387,7 +394,7 @@ class MultiCameraFusion:
             for camera_detections in all_detections:
                 # Find detection closest in time
                 closest_detection = None
-                min_time_diff = float('inf')
+                min_time_diff = float("inf")
 
                 for detection in camera_detections:
                     time_diff = abs(detection.timestamp - timestamp)
@@ -405,7 +412,7 @@ class MultiCameraFusion:
 
         return synchronized_groups
 
-    def get_camera_info(self, camera_id: str) -> Optional[CameraParameters]:
+    def get_camera_info(self, camera_id: str) -> CameraParameters | None:
         """Get camera parameters by ID.
 
         Args:
@@ -436,7 +443,7 @@ class MultiCameraFusion:
             del self.projection_matrices[camera_id]
 
 
-def create_default_pool_cameras() -> List[CameraParameters]:
+def create_default_pool_cameras() -> list[CameraParameters]:
     """Create default camera setup for swimming pool analysis.
 
     Returns:
@@ -445,65 +452,80 @@ def create_default_pool_cameras() -> List[CameraParameters]:
     cameras = []
 
     # Overhead camera (above pool, looking down)
-    K_overhead = np.array([
-        [1000, 0, 960],
-        [0, 1000, 540],
-        [0, 0, 1],
-    ], dtype=np.float32)
+    K_overhead = np.array(
+        [
+            [1000, 0, 960],
+            [0, 1000, 540],
+            [0, 0, 1],
+        ],
+        dtype=np.float32,
+    )
 
     R_overhead = np.eye(3, dtype=np.float32)  # Looking straight down
     t_overhead = np.array([0, 0, 5], dtype=np.float32)  # 5 meters above pool
 
-    cameras.append(CameraParameters(
-        camera_id="overhead",
-        intrinsic_matrix=K_overhead,
-        distortion_coeffs=np.zeros(5, dtype=np.float32),
-        rotation_matrix=R_overhead,
-        translation_vector=t_overhead,
-        resolution=(1920, 1080),
-        position="overhead",
-    ))
+    cameras.append(
+        CameraParameters(
+            camera_id="overhead",
+            intrinsic_matrix=K_overhead,
+            distortion_coeffs=np.zeros(5, dtype=np.float32),
+            rotation_matrix=R_overhead,
+            translation_vector=t_overhead,
+            resolution=(1920, 1080),
+            position="overhead",
+        )
+    )
 
     # Side camera (side of pool, at water level)
-    K_side = np.array([
-        [1000, 0, 960],
-        [0, 1000, 540],
-        [0, 0, 1],
-    ], dtype=np.float32)
+    K_side = np.array(
+        [
+            [1000, 0, 960],
+            [0, 1000, 540],
+            [0, 0, 1],
+        ],
+        dtype=np.float32,
+    )
 
     # Rotated 90 degrees to look across pool
-    R_side = cv2.Rodrigues(np.array([0, np.pi/2, 0], dtype=np.float32))[0]
+    R_side = cv2.Rodrigues(np.array([0, np.pi / 2, 0], dtype=np.float32))[0]
     t_side = np.array([10, 0, 0], dtype=np.float32)  # 10 meters to side
 
-    cameras.append(CameraParameters(
-        camera_id="side",
-        intrinsic_matrix=K_side,
-        distortion_coeffs=np.zeros(5, dtype=np.float32),
-        rotation_matrix=R_side,
-        translation_vector=t_side,
-        resolution=(1920, 1080),
-        position="side",
-    ))
+    cameras.append(
+        CameraParameters(
+            camera_id="side",
+            intrinsic_matrix=K_side,
+            distortion_coeffs=np.zeros(5, dtype=np.float32),
+            rotation_matrix=R_side,
+            translation_vector=t_side,
+            resolution=(1920, 1080),
+            position="side",
+        )
+    )
 
     # Underwater camera (below water, looking up)
-    K_underwater = np.array([
-        [800, 0, 640],  # Different focal length due to water refraction
-        [0, 800, 360],
-        [0, 0, 1],
-    ], dtype=np.float32)
+    K_underwater = np.array(
+        [
+            [800, 0, 640],  # Different focal length due to water refraction
+            [0, 800, 360],
+            [0, 0, 1],
+        ],
+        dtype=np.float32,
+    )
 
     # Looking up from below
     R_underwater = cv2.Rodrigues(np.array([np.pi, 0, 0], dtype=np.float32))[0]
     t_underwater = np.array([0, 0, -2], dtype=np.float32)  # 2 meters below surface
 
-    cameras.append(CameraParameters(
-        camera_id="underwater",
-        intrinsic_matrix=K_underwater,
-        distortion_coeffs=np.zeros(5, dtype=np.float32),
-        rotation_matrix=R_underwater,
-        translation_vector=t_underwater,
-        resolution=(1280, 720),
-        position="underwater",
-    ))
+    cameras.append(
+        CameraParameters(
+            camera_id="underwater",
+            intrinsic_matrix=K_underwater,
+            distortion_coeffs=np.zeros(5, dtype=np.float32),
+            rotation_matrix=R_underwater,
+            translation_vector=t_underwater,
+            resolution=(1280, 720),
+            position="underwater",
+        )
+    )
 
     return cameras

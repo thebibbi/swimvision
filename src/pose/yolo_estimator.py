@@ -1,8 +1,5 @@
 """YOLO11 pose estimation wrapper."""
 
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple
-
 import numpy as np
 from ultralytics import YOLO
 
@@ -35,9 +32,9 @@ class YOLOPoseEstimator:
 
     def __init__(
         self,
-        model_name: Optional[str] = None,
-        device: Optional[str] = None,
-        confidence: Optional[float] = None,
+        model_name: str | None = None,
+        device: str | None = None,
+        confidence: float | None = None,
     ):
         """Initialize YOLO pose estimator.
 
@@ -76,7 +73,7 @@ class YOLOPoseEstimator:
 
     def estimate_pose(
         self, frame: np.ndarray, return_image: bool = False
-    ) -> Tuple[Optional[Dict], Optional[np.ndarray]]:
+    ) -> tuple[dict | None, np.ndarray | None]:
         """Estimate pose from a single frame.
 
         Args:
@@ -91,7 +88,7 @@ class YOLOPoseEstimator:
         # Debug: Log input frame info
         print(f"[DEBUG] Input frame shape: {frame.shape}, dtype: {frame.dtype}")
         print(f"[DEBUG] Model confidence threshold: {self.confidence}")
-        
+
         # Run inference
         results = self.model.predict(
             frame,
@@ -101,7 +98,7 @@ class YOLOPoseEstimator:
             imgsz=self.imgsz,
             verbose=False,
         )
-        
+
         # Debug: Log inference results
         print(f"[DEBUG] Number of results: {len(results)}")
         if len(results) > 0:
@@ -125,7 +122,7 @@ class YOLOPoseEstimator:
                 # Take first detection (single swimmer)
                 kpts = result.keypoints.data[0].cpu().numpy()  # Shape: (17, 3) [x, y, conf]
                 print(f"[DEBUG] Keypoints shape: {kpts.shape}")
-                
+
                 # Check if keypoints are not empty and have correct shape
                 if kpts.shape[0] > 0 and kpts.shape[1] >= 3:  # Should be (17, 3)
                     # Get bounding box
@@ -146,21 +143,23 @@ class YOLOPoseEstimator:
                         "bbox": bbox,
                         "confidence": float(result.boxes.data[0][4]) if bbox else 0.0,
                     }
-                    print(f"[DEBUG] Successfully built pose_data with confidence: {pose_data['confidence']}")
+                    print(
+                        f"[DEBUG] Successfully built pose_data with confidence: {pose_data['confidence']}"
+                    )
                 else:
                     print(f"[DEBUG] Keypoints tensor is empty or malformed: {kpts.shape}")
             else:
-                print(f"[DEBUG] No keypoints data available")
+                print("[DEBUG] No keypoints data available")
 
             # Get annotated image if requested
             if return_image:
                 annotated_image = result.plot()
         else:
-            print(f"[DEBUG] No pose detected - returning None")
+            print("[DEBUG] No pose detected - returning None")
 
         return pose_data, annotated_image
 
-    def _build_keypoints_dict(self, kpts: np.ndarray) -> Dict[str, Dict[str, float]]:
+    def _build_keypoints_dict(self, kpts: np.ndarray) -> dict[str, dict[str, float]]:
         """Build keypoints dictionary from YOLO output.
 
         Args:
@@ -178,9 +177,7 @@ class YOLOPoseEstimator:
             }
         return keypoints
 
-    def estimate_poses_batch(
-        self, frames: List[np.ndarray]
-    ) -> List[Optional[Dict]]:
+    def estimate_poses_batch(self, frames: list[np.ndarray]) -> list[dict | None]:
         """Estimate poses from multiple frames (batch processing).
 
         Args:
@@ -229,8 +226,8 @@ class YOLOPoseEstimator:
         return poses
 
     def get_keypoint(
-        self, pose_data: Dict, keypoint_name: str
-    ) -> Optional[Tuple[float, float, float]]:
+        self, pose_data: dict, keypoint_name: str
+    ) -> tuple[float, float, float] | None:
         """Get a specific keypoint from pose data.
 
         Args:
@@ -250,7 +247,7 @@ class YOLOPoseEstimator:
         return (kpt["x"], kpt["y"], kpt["confidence"])
 
     def is_keypoint_visible(
-        self, pose_data: Dict, keypoint_name: str, min_confidence: float = 0.3
+        self, pose_data: dict, keypoint_name: str, min_confidence: float = 0.3
     ) -> bool:
         """Check if a keypoint is visible (above confidence threshold).
 

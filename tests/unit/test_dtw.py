@@ -1,7 +1,6 @@
 """Unit tests for DTW analyzer."""
 
 import numpy as np
-import pytest
 
 from src.analysis.dtw_analyzer import DTWAnalyzer
 

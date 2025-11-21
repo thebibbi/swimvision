@@ -8,17 +8,18 @@ Shows how to use:
 - Model comparison
 """
 
+import argparse
+from pathlib import Path
+
 import cv2
 import numpy as np
-from pathlib import Path
-import argparse
 
 
 def demo_mediapipe():
     """Demonstrate MediaPipe pose estimation."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("MediaPipe Pose Estimation Demo")
-    print("="*60)
+    print("=" * 60)
 
     try:
         from src.pose.mediapipe_estimator import MediaPipeEstimator
@@ -30,7 +31,7 @@ def demo_mediapipe():
             min_detection_confidence=0.5,
         )
 
-        print(f"Model loaded successfully!")
+        print("Model loaded successfully!")
         print(f"  - Supports 3D: {estimator.supports_3d()}")
         print(f"  - Supports multi-person: {estimator.supports_multi_person()}")
         print(f"  - Keypoint format: {estimator.get_keypoint_format().value}")
@@ -65,12 +66,12 @@ def demo_mediapipe():
 
 def demo_model_fusion():
     """Demonstrate multi-model fusion."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Multi-Model Fusion Demo")
-    print("="*60)
+    print("=" * 60)
 
     try:
-        from src.pose.model_fusion import MultiModelFusion, FusionMethod
+        from src.pose.model_fusion import FusionMethod, MultiModelFusion
         from src.pose.yolo_estimator import YOLOPoseEstimator
 
         print("\nInitializing models for fusion...")
@@ -89,6 +90,7 @@ def demo_model_fusion():
         # MediaPipe model
         try:
             from src.pose.mediapipe_estimator import MediaPipeEstimator
+
             mp_model = MediaPipeEstimator(model_complexity=1, min_detection_confidence=0.5)
             models.append(mp_model)
             print("  - Added MediaPipe")
@@ -131,11 +133,11 @@ def demo_model_fusion():
 
 def demo_water_surface_detection():
     """Demonstrate water surface detection."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Water Surface Detection Demo")
-    print("="*60)
+    print("=" * 60)
 
-    from src.analysis.water_surface_detector import WaterSurfaceDetector, WaterState
+    from src.analysis.water_surface_detector import WaterSurfaceDetector
 
     # Create simulated pool image
     print("\nCreating simulated pool image...")
@@ -193,11 +195,11 @@ def demo_water_surface_detection():
 
 def demo_adaptive_tuning():
     """Demonstrate adaptive threshold tuning."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Adaptive Threshold Tuning Demo")
-    print("="*60)
+    print("=" * 60)
 
-    from src.utils.adaptive_tuning import AdaptiveThresholdTuner, PoolCondition
+    from src.utils.adaptive_tuning import AdaptiveThresholdTuner
 
     print("\nInitializing adaptive tuner...")
     tuner = AdaptiveThresholdTuner(
@@ -227,10 +229,10 @@ def demo_adaptive_tuning():
 
         conf = np.random.uniform(*conf_range)
         detection = {
-            'keypoints': np.random.rand(17, 3) * conf,
+            "keypoints": np.random.rand(17, 3) * conf,
         }
 
-        params = tuner.update(detection, frame_stats={'brightness': 120})
+        params = tuner.update(detection, frame_stats={"brightness": 120})
 
         # Print every 10 frames
         if (i + 1) % 10 == 0:
@@ -247,13 +249,13 @@ def demo_adaptive_tuning():
 
 def demo_model_comparison():
     """Demonstrate model comparison tools."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Model Comparison Demo")
-    print("="*60)
+    print("=" * 60)
 
     try:
-        from src.utils.model_comparison import ModelComparison
         from src.pose.yolo_estimator import YOLOPoseEstimator
+        from src.utils.model_comparison import ModelComparison
 
         print("\nInitializing models for comparison...")
 
@@ -270,6 +272,7 @@ def demo_model_comparison():
         # Add MediaPipe
         try:
             from src.pose.mediapipe_estimator import MediaPipeEstimator
+
             models["MediaPipe"] = MediaPipeEstimator()
             print("  - Added MediaPipe")
         except ImportError:
@@ -289,7 +292,7 @@ def demo_model_comparison():
         test_video_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Create simple test video
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
         out = cv2.VideoWriter(str(test_video_path), fourcc, 30.0, (640, 480))
 
         for i in range(30):  # 30 frames
@@ -302,14 +305,14 @@ def demo_model_comparison():
         print("\nRunning comparison (this may take a moment)...")
         result = comparison.benchmark_on_video(str(test_video_path), max_frames=30)
 
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print(result.summary)
-        print("="*60)
+        print("=" * 60)
 
         # Generate report
         report = comparison.generate_comparison_report()
         report_path = Path("results/comparison_demo/report.md")
-        with open(report_path, 'w') as f:
+        with open(report_path, "w") as f:
             f.write(report)
 
         print(f"\nFull report saved to: {report_path}")
@@ -319,6 +322,7 @@ def demo_model_comparison():
     except Exception as e:
         print(f"ERROR: {e}")
         import traceback
+
         traceback.print_exc()
 
 
@@ -334,9 +338,9 @@ def main():
 
     args = parser.parse_args()
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("SwimVision Pro - Advanced Features Demo")
-    print("="*60)
+    print("=" * 60)
 
     demos = {
         "mediapipe": demo_mediapipe,
@@ -353,13 +357,14 @@ def main():
             except Exception as e:
                 print(f"\nERROR in {name} demo: {e}")
                 import traceback
+
                 traceback.print_exc()
     else:
         demos[args.demo]()
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("All demos complete!")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
 
 
 if __name__ == "__main__":

@@ -2,15 +2,15 @@
 
 # Dynamic Time Warping (DTW) Settings
 dtw:
-  window_type: "sakoe_chiba"  # Window constraint type
+  window_type: sakoe_chiba    # Window constraint type
   window_size: 10              # Sakoe-Chiba band width
-  distance_metric: "euclidean" # Distance metric
+  distance_metric: euclidean   # Distance metric
   normalize: true              # Normalize sequences before comparison
-  step_pattern: "symmetric2"   # DTW step pattern
+  step_pattern: symmetric2     # DTW step pattern
 
 # Frechet Distance Settings
 frechet:
-  distance_metric: "euclidean"
+  distance_metric: euclidean
   normalize: true
 
 # Stroke Phase Detection
@@ -29,10 +29,10 @@ similarity_weights:
 
 # Feature Extraction
 features:
-  smoothing_method: "savgol"  # Smoothing method: kalman, savgol, ma
+  smoothing_method: savgol    # Smoothing method: kalman, savgol, ma
   savgol_window: 11           # Savitzky-Golay window size (odd number)
   savgol_polyorder: 3         # Polynomial order for Savgol
-  velocity_method: "finite_diff"  # Velocity calculation method
+  velocity_method: finite_diff    # Velocity calculation method
 
 # Symmetry Analysis
 symmetry:
