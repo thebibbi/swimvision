@@ -122,18 +122,50 @@ class PoseFormerV2Estimator:
 
     def _load_model(self):
         """
-        Load PoseFormerV2 model.
-
-        TODO: Implement actual model loading from:
-        - GitHub repo: https://github.com/QitaoZhao/PoseFormerV2
-        - Pre-trained weights
+        Load PoseFormerV2 model with pre-trained weights.
         """
-        logger.warning("PoseFormerV2 model loading not yet implemented")
-        # Placeholder
-        # self.model = PoseFormerV2Model(...)
-        # self.model.load_state_dict(torch.load(self.model_path))
-        # self.model.to(self.device)
-        # self.model.eval()
+        try:
+            from src.reconstruction.poseformerv2_loader import (
+                load_poseformerv2_model,
+                get_variant_from_params
+            )
+
+            # Determine variant based on sequence length and frame_kept
+            if self.variant is None:
+                self.variant = get_variant_from_params(
+                    num_frames=self.sequence_length,
+                    frame_kept=3  # Default to 3 frames kept
+                )
+                logger.info(f"Auto-selected variant: {self.variant}")
+
+            self.model = load_poseformerv2_model(
+                variant=self.variant,
+                device=self.device,
+                checkpoint_path=self.model_path,
+                download_if_missing=False
+            )
+            logger.info(f"PoseFormerV2 model loaded successfully")
+
+        except FileNotFoundError as e:
+            logger.warning(
+                f"Pre-trained weights not found: {e}\n"
+                f"To download weights, run: bash scripts/download_poseformerv2_weights.sh\n"
+                f"Model will run in placeholder mode (zero depth estimation)"
+            )
+            self.model = None
+
+        except ImportError as e:
+            logger.warning(
+                f"Failed to load PoseFormerV2: {e}\n"
+                f"Make sure the repository is cloned at models/poseformerv2/\n"
+                f"and torch-dct is installed: pip install torch-dct\n"
+                f"Model will run in placeholder mode"
+            )
+            self.model = None
+
+        except Exception as e:
+            logger.error(f"Unexpected error loading model: {e}")
+            self.model = None
 
     def add_frame_2d(self, pose_2d: Optional[np.ndarray]) -> Optional[np.ndarray]:
         """
@@ -215,23 +247,37 @@ class PoseFormerV2Estimator:
             pose_3d[:, 2] = 0.0
             return pose_3d
 
-        # TODO: Actual model inference with DCT/DST
-        # if self.use_dct:
-        #     sequence_freq = self._apply_dct(sequence_2d)
-        # else:
-        #     sequence_freq = sequence_2d
-        #
-        # sequence_tensor = torch.from_numpy(sequence_freq).float().to(self.device)
-        # with torch.no_grad():
-        #     pose_3d = self.model(sequence_tensor)
-        # return pose_3d.cpu().numpy()
+        # Actual model inference with frequency domain
+        try:
+            # Prepare input: extract x,y coordinates only (T x 17 x 2)
+            sequence_xy = sequence_2d[:, :, :2]
 
-        # Placeholder
-        center_idx = len(sequence_2d) // 2
-        pose_3d = np.zeros((17, 3))
-        pose_3d[:, :2] = sequence_2d[center_idx, :, :2]
-        pose_3d[:, 2] = 0.0
-        return pose_3d
+            # Reshape for model: (1, T, 17, 2)
+            batch_size = 1
+            T, J, _ = sequence_xy.shape
+            sequence_input = sequence_xy.reshape(batch_size, T, J, 2)
+
+            # Convert to torch tensor
+            sequence_tensor = torch.from_numpy(sequence_input).float().to(self.device)
+
+            # Run inference (model applies DCT internally)
+            with torch.no_grad():
+                # Model outputs 3D pose for center frame(s)
+                pose_3d_tensor = self.model(sequence_tensor)
+
+                # Extract center frame: (1, J, 3) -> (J, 3)
+                pose_3d = pose_3d_tensor.squeeze(0).cpu().numpy()
+
+            return pose_3d
+
+        except Exception as e:
+            logger.error(f"Error during model inference: {e}")
+            # Fallback to placeholder
+            center_idx = len(sequence_2d) // 2
+            pose_3d = np.zeros((17, 3))
+            pose_3d[:, :2] = sequence_2d[center_idx, :, :2]
+            pose_3d[:, 2] = 0.0
+            return pose_3d
 
     def _apply_dct(self, sequence: np.ndarray) -> np.ndarray:
         """
