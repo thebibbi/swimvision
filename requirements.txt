@@ -41,7 +41,7 @@ shap==0.46.0                 # Model interpretability
 # ========================================
 # Web Interface
 # ========================================
-streamlit==1.39.0
+streamlit==1.51.0
 streamlit-webrtc==0.47.9     # Real-time video streaming
 
 # ========================================
