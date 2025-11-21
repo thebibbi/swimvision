@@ -35,7 +35,7 @@ pandas==2.2.3
 catboost==1.2.7              # Primary injury prediction model
 xgboost==2.1.2               # Secondary model
 lightgbm==4.5.0              # Fast experimentation
-imbalanced-learn==0.12.4     # SMOTE for class imbalance
+imbalanced-learn==0.14.0     # SMOTE for class imbalance
 shap==0.46.0                 # Model interpretability
 
 # ========================================
