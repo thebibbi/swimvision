@@ -15,4 +15,22 @@ Components:
 - export_formats: Exports data in standard mocap formats
 """
 
-__all__ = []
+from src.integration.skellytracker_wrapper import (
+    SwimVisionTracker,
+    TrackerBackend,
+    create_tracker,
+)
+from src.integration.freemocap_bridge import (
+    FreeMoCapBridge,
+    create_multicamera_setup,
+)
+
+__all__ = [
+    # SkellyTracker integration
+    "SwimVisionTracker",
+    "TrackerBackend",
+    "create_tracker",
+    # FreeMoCap integration
+    "FreeMoCapBridge",
+    "create_multicamera_setup",
+]
