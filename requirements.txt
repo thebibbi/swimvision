@@ -24,7 +24,7 @@ av==13.1.0                   # PyAV for video I/O
 # Time Series Analysis
 # ========================================
 scipy==1.14.1                # Signal processing, Frechet distance
-dtaidistance==2.3.12         # Fast DTW implementation
+dtaidistance==2.3.13         # Fast DTW implementation
 similaritymeasures==1.1.0    # Additional trajectory similarity metrics
 
 # ========================================
