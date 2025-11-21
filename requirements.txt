@@ -10,7 +10,7 @@
 # ========================================
 ultralytics==8.3.50          # YOLO11-Pose (primary)
 torch==2.5.1                 # PyTorch for YOLO11
-torchvision==0.20.1          # Vision utilities
+torchvision==0.24.1          # Vision utilities
 
 # ========================================
 # Computer Vision & Video Processing
