@@ -11,10 +11,11 @@ Author: SwimVision Pro Team
 Date: 2025-01-20
 """
 
-import torch
-import platform
 import logging
-from typing import Optional, Literal
+import platform
+from typing import Literal
+
+import torch
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +33,7 @@ class DeviceManager:
     """
 
     _instance = None
-    _detected_device: Optional[str] = None
+    _detected_device: str | None = None
 
     def __new__(cls):
         """Singleton pattern to cache device detection."""
@@ -83,7 +84,7 @@ class DeviceManager:
         return "cpu"
 
     @staticmethod
-    def get_device(preferred: Optional[str] = None) -> str:
+    def get_device(preferred: str | None = None) -> str:
         """
         Get the device to use, with optional preference.
 
@@ -149,7 +150,7 @@ class DeviceManager:
             "pytorch_version": torch.__version__,
             "cuda_available": torch.cuda.is_available(),
             "mps_available": torch.backends.mps.is_available(),
-            "recommended_device": DeviceManager.detect_device()
+            "recommended_device": DeviceManager.detect_device(),
         }
 
         # CUDA details
@@ -158,8 +159,7 @@ class DeviceManager:
             info["cudnn_version"] = torch.backends.cudnn.version()
             info["gpu_count"] = torch.cuda.device_count()
             info["gpu_names"] = [
-                torch.cuda.get_device_name(i)
-                for i in range(torch.cuda.device_count())
+                torch.cuda.get_device_name(i) for i in range(torch.cuda.device_count())
             ]
             info["gpu_memory"] = [
                 f"{torch.cuda.get_device_properties(i).total_memory / 1e9:.2f} GB"
@@ -172,11 +172,10 @@ class DeviceManager:
             # Try to get more Mac-specific info
             try:
                 import subprocess
+
                 # Get chip info (M1/M2/M3)
                 result = subprocess.run(
-                    ["sysctl", "-n", "machdep.cpu.brand_string"],
-                    capture_output=True,
-                    text=True
+                    ["sysctl", "-n", "machdep.cpu.brand_string"], capture_output=True, text=True
                 )
                 if result.returncode == 0:
                     info["chip"] = result.stdout.strip()
@@ -190,31 +189,33 @@ class DeviceManager:
         """Print formatted device information."""
         info = DeviceManager.get_device_info()
 
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("DEVICE INFORMATION")
-        print("="*60)
+        print("=" * 60)
         print(f"Platform:          {info['platform']}")
         print(f"Machine:           {info['machine']}")
         print(f"Processor:         {info['processor']}")
-        if 'chip' in info:
+        if "chip" in info:
             print(f"Chip:              {info['chip']}")
         print(f"Python:            {info['python_version']}")
         print(f"PyTorch:           {info['pytorch_version']}")
         print()
         print(f"CUDA Available:    {info['cuda_available']}")
-        if info['cuda_available']:
+        if info["cuda_available"]:
             print(f"  CUDA Version:    {info['cuda_version']}")
             print(f"  cuDNN Version:   {info['cudnn_version']}")
             print(f"  GPU Count:       {info['gpu_count']}")
-            for i, (name, mem) in enumerate(zip(info['gpu_names'], info['gpu_memory'])):
+            for i, (name, mem) in enumerate(
+                zip(info["gpu_names"], info["gpu_memory"], strict=False)
+            ):
                 print(f"  GPU {i}:           {name} ({mem})")
         print()
         print(f"MPS Available:     {info['mps_available']}")
-        if info['mps_available']:
+        if info["mps_available"]:
             print(f"  Backend:         {info.get('mps_backend', 'N/A')}")
         print()
         print(f"Recommended:       {info['recommended_device'].upper()}")
-        print("="*60 + "\n")
+        print("=" * 60 + "\n")
 
     @staticmethod
     def optimize_for_device(model: torch.nn.Module, device: str) -> torch.nn.Module:
@@ -275,7 +276,7 @@ class DeviceManager:
             return data
 
 
-def get_optimal_device(preferred: Optional[str] = None) -> str:
+def get_optimal_device(preferred: str | None = None) -> str:
     """
     Convenience function to get optimal device.
 

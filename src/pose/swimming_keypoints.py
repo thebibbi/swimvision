@@ -1,7 +1,5 @@
 """Swimming-specific keypoint analysis."""
 
-from typing import Dict, List, Optional, Tuple
-
 from src.utils.geometry import calculate_angle, calculate_body_roll
 
 
@@ -21,7 +19,7 @@ class SwimmingKeypoints:
         """
         self.min_confidence = min_confidence
 
-    def get_body_angles(self, pose_data: Dict) -> Dict[str, Optional[float]]:
+    def get_body_angles(self, pose_data: dict) -> dict[str, float | None]:
         """Calculate all swimming-relevant body angles.
 
         Args:
@@ -47,7 +45,7 @@ class SwimmingKeypoints:
 
         return angles
 
-    def calculate_elbow_angle(self, pose_data: Dict, side: str) -> Optional[float]:
+    def calculate_elbow_angle(self, pose_data: dict, side: str) -> float | None:
         """Calculate elbow angle (shoulder-elbow-wrist).
 
         Args:
@@ -66,7 +64,7 @@ class SwimmingKeypoints:
 
         return calculate_angle(shoulder, elbow, wrist)
 
-    def calculate_shoulder_angle(self, pose_data: Dict, side: str) -> Optional[float]:
+    def calculate_shoulder_angle(self, pose_data: dict, side: str) -> float | None:
         """Calculate shoulder angle (hip-shoulder-elbow).
 
         Args:
@@ -85,7 +83,7 @@ class SwimmingKeypoints:
 
         return calculate_angle(hip, shoulder, elbow)
 
-    def calculate_knee_angle(self, pose_data: Dict, side: str) -> Optional[float]:
+    def calculate_knee_angle(self, pose_data: dict, side: str) -> float | None:
         """Calculate knee angle (hip-knee-ankle).
 
         Args:
@@ -104,7 +102,7 @@ class SwimmingKeypoints:
 
         return calculate_angle(hip, knee, ankle)
 
-    def calculate_hip_angle(self, pose_data: Dict, side: str) -> Optional[float]:
+    def calculate_hip_angle(self, pose_data: dict, side: str) -> float | None:
         """Calculate hip angle (shoulder-hip-knee).
 
         Args:
@@ -123,7 +121,7 @@ class SwimmingKeypoints:
 
         return calculate_angle(shoulder, hip, knee)
 
-    def calculate_body_roll_angle(self, pose_data: Dict) -> Optional[float]:
+    def calculate_body_roll_angle(self, pose_data: dict) -> float | None:
         """Calculate body roll angle from shoulders and hips.
 
         Args:
@@ -137,19 +135,12 @@ class SwimmingKeypoints:
         left_hip = self._get_keypoint(pose_data, "left_hip")
         right_hip = self._get_keypoint(pose_data, "right_hip")
 
-        if (
-            left_shoulder is None
-            or right_shoulder is None
-            or left_hip is None
-            or right_hip is None
-        ):
+        if left_shoulder is None or right_shoulder is None or left_hip is None or right_hip is None:
             return None
 
         return calculate_body_roll(left_shoulder, right_shoulder, left_hip, right_hip)
 
-    def get_hand_path(
-        self, pose_sequence: List[Dict], side: str
-    ) -> List[Tuple[float, float]]:
+    def get_hand_path(self, pose_sequence: list[dict], side: str) -> list[tuple[float, float]]:
         """Extract hand trajectory from pose sequence.
 
         Args:
@@ -167,7 +158,7 @@ class SwimmingKeypoints:
 
         return hand_path
 
-    def get_arm_extension(self, pose_data: Dict, side: str) -> Optional[float]:
+    def get_arm_extension(self, pose_data: dict, side: str) -> float | None:
         """Calculate arm extension (0 = fully bent, 180 = fully straight).
 
         Args:
@@ -179,9 +170,7 @@ class SwimmingKeypoints:
         """
         return self.calculate_elbow_angle(pose_data, side)
 
-    def check_symmetric_position(
-        self, pose_data: Dict, tolerance: float = 15.0
-    ) -> Dict[str, bool]:
+    def check_symmetric_position(self, pose_data: dict, tolerance: float = 15.0) -> dict[str, bool]:
         """Check if left and right sides are symmetric.
 
         Args:
@@ -211,7 +200,7 @@ class SwimmingKeypoints:
 
         return symmetry
 
-    def validate_pose(self, pose_data: Dict) -> Tuple[bool, List[str]]:
+    def validate_pose(self, pose_data: dict) -> tuple[bool, list[str]]:
         """Validate that essential keypoints are present for swimming analysis.
 
         Args:
@@ -239,9 +228,7 @@ class SwimmingKeypoints:
         is_valid = len(missing) == 0
         return is_valid, missing
 
-    def _get_keypoint(
-        self, pose_data: Dict, keypoint_name: str
-    ) -> Optional[Tuple[float, float]]:
+    def _get_keypoint(self, pose_data: dict, keypoint_name: str) -> tuple[float, float] | None:
         """Get keypoint coordinates if confidence is above threshold.
 
         Args:

@@ -15,20 +15,17 @@ Date: 2025-01-20
 """
 
 import argparse
+import sys
+from pathlib import Path
+
 import cv2
 import numpy as np
-from pathlib import Path
-import sys
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from src.pipeline.orchestrator import (
-    SwimVisionPipeline,
-    PipelineConfig,
-    ProcessingMode
-)
+from src.pipeline.orchestrator import PipelineConfig, ProcessingMode, SwimVisionPipeline
 
 
 def create_test_video(output_path: str, duration_sec: int = 5):
@@ -43,7 +40,7 @@ def create_test_video(output_path: str, duration_sec: int = 5):
     fps = 30
     total_frames = duration_sec * fps
 
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     writer = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
 
     print(f"Creating test video: {output_path}")
@@ -69,8 +66,13 @@ def create_test_video(output_path: str, duration_sec: int = 5):
 
         # Add frame number
         cv2.putText(
-            frame, f"Frame: {frame_idx}/{total_frames}",
-            (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2
+            frame,
+            f"Frame: {frame_idx}/{total_frames}",
+            (20, 40),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            (255, 255, 255),
+            2,
         )
 
         writer.write(frame)
@@ -87,32 +89,29 @@ def draw_swimmer(frame, x, y, scale=1.0):
     cv2.circle(frame, (x, y), int(15 * scale), (255, 200, 100), -1)
 
     # Body
-    cv2.line(frame, (x, y + int(15 * scale)), (x, y + int(50 * scale)),
-             (255, 200, 100), int(8 * scale))
+    cv2.line(
+        frame, (x, y + int(15 * scale)), (x, y + int(50 * scale)), (255, 200, 100), int(8 * scale)
+    )
 
     # Arms (swimming position)
     arm_y = y + int(25 * scale)
-    cv2.line(frame, (x, arm_y), (x - s, arm_y - s // 2),
-             (255, 200, 100), int(6 * scale))
-    cv2.line(frame, (x, arm_y), (x + s, arm_y - s // 2),
-             (255, 200, 100), int(6 * scale))
+    cv2.line(frame, (x, arm_y), (x - s, arm_y - s // 2), (255, 200, 100), int(6 * scale))
+    cv2.line(frame, (x, arm_y), (x + s, arm_y - s // 2), (255, 200, 100), int(6 * scale))
 
     # Legs (kicking)
     leg_y = y + int(50 * scale)
-    cv2.line(frame, (x, leg_y), (x - s // 2, leg_y + s),
-             (255, 200, 100), int(6 * scale))
-    cv2.line(frame, (x, leg_y), (x + s // 2, leg_y + s),
-             (255, 200, 100), int(6 * scale))
+    cv2.line(frame, (x, leg_y), (x - s // 2, leg_y + s), (255, 200, 100), int(6 * scale))
+    cv2.line(frame, (x, leg_y), (x + s // 2, leg_y + s), (255, 200, 100), int(6 * scale))
 
 
 def demo_webcam(pipeline: SwimVisionPipeline):
     """Run pipeline on webcam feed."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("WEBCAM DEMO")
-    print("="*60)
+    print("=" * 60)
     print("Press 'q' to quit")
     print("Press 's' to save screenshot")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
 
     cap = cv2.VideoCapture(0)
     if not cap.isOpened():
@@ -135,9 +134,9 @@ def demo_webcam(pipeline: SwimVisionPipeline):
 
             # Handle keyboard
             key = cv2.waitKey(1) & 0xFF
-            if key == ord('q'):
+            if key == ord("q"):
                 break
-            elif key == ord('s'):
+            elif key == ord("s"):
                 # Save screenshot
                 filename = f"screenshot_{frame_count}.jpg"
                 cv2.imwrite(filename, result.visualized_frame)
@@ -155,20 +154,16 @@ def demo_webcam(pipeline: SwimVisionPipeline):
 
 def demo_video(pipeline: SwimVisionPipeline, video_path: str, output_path: str = None):
     """Run pipeline on video file."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("VIDEO DEMO")
-    print("="*60)
+    print("=" * 60)
     print(f"Input: {video_path}")
     if output_path:
         print(f"Output: {output_path}")
     print("Press 'q' to quit early")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
 
-    results = pipeline.process_video(
-        video_path,
-        output_path=output_path,
-        show_preview=True
-    )
+    results = pipeline.process_video(video_path, output_path=output_path, show_preview=True)
 
     print(f"\n✅ Processed {len(results)} frames")
 
@@ -183,9 +178,9 @@ def print_statistics(pipeline: SwimVisionPipeline):
     """Print pipeline statistics."""
     stats = pipeline.get_statistics()
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("PIPELINE STATISTICS")
-    print("="*60)
+    print("=" * 60)
     print(f"Total frames:          {stats.get('total_frames', 0)}")
     print(f"Average FPS:           {stats.get('avg_fps', 0):.1f}")
     print(f"Min FPS:               {stats.get('min_fps', 0):.1f}")
@@ -194,14 +189,14 @@ def print_statistics(pipeline: SwimVisionPipeline):
     print(f"Avg swimmers/frame:    {stats.get('avg_swimmers_per_frame', 0):.1f}")
     print(f"Max swimmers detected: {stats.get('max_swimmers', 0)}")
     print(f"Total runtime:         {stats.get('total_runtime', 0):.1f} s")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
 
 
 def analyze_tracking(results):
     """Analyze tracking performance across frames."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("TRACKING ANALYSIS")
-    print("="*60)
+    print("=" * 60)
 
     # Collect all unique track IDs
     all_track_ids = set()
@@ -209,13 +204,13 @@ def analyze_tracking(results):
 
     for result in results:
         for swimmer in result.tracked_swimmers:
-            track_id = swimmer.get('track_id')
+            track_id = swimmer.get("track_id")
             if track_id is not None:
                 all_track_ids.add(track_id)
                 track_appearances[track_id] = track_appearances.get(track_id, 0) + 1
 
     print(f"Unique tracks detected: {len(all_track_ids)}")
-    print(f"\nTrack persistence:")
+    print("\nTrack persistence:")
     for track_id, count in sorted(track_appearances.items()):
         percentage = (count / len(results)) * 100
         print(f"  Track {track_id}: {count}/{len(results)} frames ({percentage:.1f}%)")
@@ -225,66 +220,46 @@ def analyze_tracking(results):
         avg_persistence = np.mean(list(track_appearances.values()))
         print(f"\nAverage track persistence: {avg_persistence:.1f} frames")
 
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="SwimVision Phase 1 Pipeline Demo"
-    )
+    parser = argparse.ArgumentParser(description="SwimVision Phase 1 Pipeline Demo")
+    parser.add_argument("--video", type=str, help="Path to input video file")
+    parser.add_argument("--webcam", action="store_true", help="Use webcam instead of video file")
+    parser.add_argument("--output", type=str, help="Path to save output video")
     parser.add_argument(
-        "--video",
-        type=str,
-        help="Path to input video file"
-    )
-    parser.add_argument(
-        "--webcam",
-        action="store_true",
-        help="Use webcam instead of video file"
-    )
-    parser.add_argument(
-        "--output",
-        type=str,
-        help="Path to save output video"
-    )
-    parser.add_argument(
-        "--create-test-video",
-        action="store_true",
-        help="Create a synthetic test video"
+        "--create-test-video", action="store_true", help="Create a synthetic test video"
     )
     parser.add_argument(
         "--model",
         type=str,
         default="rtmpose-m",
         choices=["rtmpose-t", "rtmpose-s", "rtmpose-m", "rtmpose-l"],
-        help="RTMPose model variant"
+        help="RTMPose model variant",
     )
     parser.add_argument(
         "--mode",
         type=str,
         default="realtime",
         choices=["realtime", "balanced", "accuracy"],
-        help="Processing mode"
+        help="Processing mode",
     )
     parser.add_argument(
         "--device",
         type=str,
         default="auto",
         choices=["auto", "cuda", "mps", "cpu"],
-        help="Device to use (auto for auto-detection, cuda for NVIDIA GPU, mps for Apple Silicon, cpu for CPU)"
+        help="Device to use (auto for auto-detection, cuda for NVIDIA GPU, mps for Apple Silicon, cpu for CPU)",
     )
-    parser.add_argument(
-        "--no-tracking",
-        action="store_true",
-        help="Disable tracking"
-    )
+    parser.add_argument("--no-tracking", action="store_true", help="Disable tracking")
     parser.add_argument(
         "--formats",
         type=str,
         nargs="+",
         default=["coco17", "smpl24"],
         choices=["coco17", "smpl24", "opensim"],
-        help="Output formats for keypoints"
+        help="Output formats for keypoints",
     )
 
     args = parser.parse_args()
@@ -294,14 +269,14 @@ def main():
         test_video_path = "data/videos/test_swimmers.mp4"
         Path(test_video_path).parent.mkdir(parents=True, exist_ok=True)
         create_test_video(test_video_path, duration_sec=10)
-        print(f"\n✅ Test video created. Run demo with:")
+        print("\n✅ Test video created. Run demo with:")
         print(f"   python {__file__} --video {test_video_path}")
         return
 
     # Validate input
     if not args.webcam and not args.video:
         print("❌ Error: Provide either --video or --webcam")
-        print(f"   Or use --create-test-video to generate a test video")
+        print("   Or use --create-test-video to generate a test video")
         parser.print_help()
         return
 
@@ -309,7 +284,7 @@ def main():
     mode_map = {
         "realtime": ProcessingMode.REALTIME,
         "balanced": ProcessingMode.BALANCED,
-        "accuracy": ProcessingMode.ACCURACY
+        "accuracy": ProcessingMode.ACCURACY,
     }
 
     config = PipelineConfig(
@@ -321,18 +296,18 @@ def main():
         show_tracking_ids=True,
         show_keypoints=True,
         show_skeleton=True,
-        device=args.device
+        device=args.device,
     )
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("SWIMVISION PHASE 1 PIPELINE DEMO")
-    print("="*60)
+    print("=" * 60)
     print(f"Pose model:    {args.model}")
     print(f"Tracking:      {'Enabled' if not args.no_tracking else 'Disabled'}")
     print(f"Mode:          {args.mode}")
     print(f"Device:        {args.device}")
     print(f"Output formats: {', '.join(args.formats)}")
-    print("="*60)
+    print("=" * 60)
 
     try:
         # Initialize pipeline
@@ -349,6 +324,7 @@ def main():
     except Exception as e:
         print(f"\n❌ Error: {e}")
         import traceback
+
         traceback.print_exc()
         print("\n💡 Make sure all dependencies are installed:")
         print("   bash scripts/setup_advanced_features.sh")

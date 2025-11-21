@@ -10,21 +10,20 @@ Install:
 - Download SMPL/SMPL-X models from https://smpl-x.is.tue.mpg.de/
 """
 
-from typing import Dict, List, Optional, Tuple
-import numpy as np
-import cv2
 from pathlib import Path
-import pickle
+
+import cv2
+import numpy as np
 
 from src.pose.base_estimator import (
     BasePoseEstimator,
     KeypointFormat,
-    PoseModel,
 )
 
 try:
-    import torch
     import smplx
+    import torch
+
     SMPLX_AVAILABLE = True
 except ImportError:
     SMPLX_AVAILABLE = False
@@ -36,7 +35,7 @@ class SMPLEstimator(BasePoseEstimator):
     def __init__(
         self,
         model_type: str = "smplx",  # 'smpl', 'smplh', 'smplx'
-        model_path: Optional[str] = None,
+        model_path: str | None = None,
         gender: str = "neutral",  # 'male', 'female', 'neutral'
         device: str = "cpu",
         confidence: float = 0.5,
@@ -76,22 +75,22 @@ class SMPLEstimator(BasePoseEstimator):
     def load_model(self):
         """Load SMPL/SMPL-X model."""
         model_params = {
-            'model_path': str(self.model_path),
-            'gender': self.gender,
-            'ext': self.ext,
+            "model_path": str(self.model_path),
+            "gender": self.gender,
+            "ext": self.ext,
         }
 
-        if self.model_type == 'smplx':
-            model_params['use_pca'] = self.use_pca
-            model_params['num_pca_comps'] = self.num_pca_comps
-            model_params['use_face_contour'] = True
-            self.model = smplx.create(**model_params, model_type='smplx')
-        elif self.model_type == 'smplh':
-            model_params['use_pca'] = self.use_pca
-            model_params['num_pca_comps'] = self.num_pca_comps
-            self.model = smplx.create(**model_params, model_type='smplh')
+        if self.model_type == "smplx":
+            model_params["use_pca"] = self.use_pca
+            model_params["num_pca_comps"] = self.num_pca_comps
+            model_params["use_face_contour"] = True
+            self.model = smplx.create(**model_params, model_type="smplx")
+        elif self.model_type == "smplh":
+            model_params["use_pca"] = self.use_pca
+            model_params["num_pca_comps"] = self.num_pca_comps
+            self.model = smplx.create(**model_params, model_type="smplh")
         else:  # smpl
-            self.model = smplx.create(**model_params, model_type='smpl')
+            self.model = smplx.create(**model_params, model_type="smpl")
 
         self.model = self.model.to(self.device)
         self.model.eval()
@@ -100,11 +99,11 @@ class SMPLEstimator(BasePoseEstimator):
         self,
         image: np.ndarray,
         return_image: bool = True,
-        body_pose: Optional[np.ndarray] = None,
-        global_orient: Optional[np.ndarray] = None,
-        transl: Optional[np.ndarray] = None,
-        betas: Optional[np.ndarray] = None,
-    ) -> Tuple[Optional[Dict], Optional[np.ndarray]]:
+        body_pose: np.ndarray | None = None,
+        global_orient: np.ndarray | None = None,
+        transl: np.ndarray | None = None,
+        betas: np.ndarray | None = None,
+    ) -> tuple[dict | None, np.ndarray | None]:
         """Estimate 3D body model from parameters.
 
         Args:
@@ -128,7 +127,7 @@ class SMPLEstimator(BasePoseEstimator):
 
         if body_pose is None:
             # Default to zero pose (T-pose)
-            num_body_joints = 21 if self.model_type == 'smpl' else 21
+            num_body_joints = 21 if self.model_type == "smpl" else 21
             body_pose = torch.zeros((batch_size, num_body_joints * 3)).to(self.device)
         else:
             body_pose = torch.from_numpy(body_pose).float().to(self.device)
@@ -169,7 +168,7 @@ class SMPLEstimator(BasePoseEstimator):
 
         # Extract outputs
         vertices = output.vertices[0].cpu().numpy()  # 3D mesh vertices
-        joints = output.joints[0].cpu().numpy()      # 3D joint locations
+        joints = output.joints[0].cpu().numpy()  # 3D joint locations
 
         # Format output
         pose_data = self._format_output(
@@ -197,8 +196,8 @@ class SMPLEstimator(BasePoseEstimator):
         global_orient: np.ndarray,
         transl: np.ndarray,
         betas: np.ndarray,
-        image_shape: Optional[Tuple[int, int, int]] = None,
-    ) -> Dict:
+        image_shape: tuple[int, int, int] | None = None,
+    ) -> dict:
         """Format SMPL output to standard format.
 
         Args:
@@ -214,59 +213,102 @@ class SMPLEstimator(BasePoseEstimator):
             Formatted pose data.
         """
         # SMPL/SMPL-X joint names
-        if self.model_type == 'smpl':
+        if self.model_type == "smpl":
             joint_names = [
-                'pelvis', 'left_hip', 'right_hip', 'spine1',
-                'left_knee', 'right_knee', 'spine2',
-                'left_ankle', 'right_ankle', 'spine3',
-                'left_foot', 'right_foot', 'neck',
-                'left_collar', 'right_collar', 'head',
-                'left_shoulder', 'right_shoulder',
-                'left_elbow', 'right_elbow',
-                'left_wrist', 'right_wrist',
-                'left_hand', 'right_hand',
+                "pelvis",
+                "left_hip",
+                "right_hip",
+                "spine1",
+                "left_knee",
+                "right_knee",
+                "spine2",
+                "left_ankle",
+                "right_ankle",
+                "spine3",
+                "left_foot",
+                "right_foot",
+                "neck",
+                "left_collar",
+                "right_collar",
+                "head",
+                "left_shoulder",
+                "right_shoulder",
+                "left_elbow",
+                "right_elbow",
+                "left_wrist",
+                "right_wrist",
+                "left_hand",
+                "right_hand",
             ]
         else:  # smplx has more joints
             joint_names = [
-                'pelvis', 'left_hip', 'right_hip', 'spine1',
-                'left_knee', 'right_knee', 'spine2',
-                'left_ankle', 'right_ankle', 'spine3',
-                'left_foot', 'right_foot', 'neck',
-                'left_collar', 'right_collar', 'head',
-                'left_shoulder', 'right_shoulder',
-                'left_elbow', 'right_elbow',
-                'left_wrist', 'right_wrist',
-            ] + [f'joint_{i}' for i in range(len(joints) - 22)]
+                "pelvis",
+                "left_hip",
+                "right_hip",
+                "spine1",
+                "left_knee",
+                "right_knee",
+                "spine2",
+                "left_ankle",
+                "right_ankle",
+                "spine3",
+                "left_foot",
+                "right_foot",
+                "neck",
+                "left_collar",
+                "right_collar",
+                "head",
+                "left_shoulder",
+                "right_shoulder",
+                "left_elbow",
+                "right_elbow",
+                "left_wrist",
+                "right_wrist",
+            ] + [f"joint_{i}" for i in range(len(joints) - 22)]
 
         # Project 3D joints to 2D if image shape provided
         keypoints_2d = None
         if image_shape is not None:
             keypoints_2d = self._project_to_2d(joints, image_shape)
+        else:
+            # Create 2D keypoints from 3D (just use x, y with confidence=1.0)
+            keypoints_2d = np.column_stack([joints[:, :2], np.ones(len(joints))])
+
+        # Build dictionary format compatible with YOLO
+        keypoints_dict = {}
+        for i, name in enumerate(joint_names[: len(joints)]):
+            keypoints_dict[name] = {
+                "x": float(keypoints_2d[i, 0]),
+                "y": float(keypoints_2d[i, 1]),
+                "confidence": float(keypoints_2d[i, 2]),
+            }
 
         return {
-            'keypoints': keypoints_2d if keypoints_2d is not None else joints[:, :2],
-            'keypoint_names': joint_names[:len(joints)],
-            'bbox': self._calculate_bbox_from_joints(joints) if keypoints_2d is not None else None,
-            'person_id': 0,
-            'format': self.get_keypoint_format(),
-            'metadata': {
-                'model': self.model_type,
-                'gender': self.gender,
-                'vertices': vertices,       # 3D mesh
-                'joints_3d': joints,        # 3D joints
-                'body_pose': body_pose,     # Pose parameters
-                'global_orient': global_orient,
-                'transl': transl,
-                'betas': betas,             # Shape parameters
-                'num_vertices': len(vertices),
-                'num_joints': len(joints),
+            "keypoints": keypoints_dict,  # Dictionary format for compatibility
+            "keypoints_array": keypoints_2d,  # Array format for legacy code
+            "keypoint_names": joint_names[: len(joints)],
+            "bbox": self._calculate_bbox_from_joints(joints) if keypoints_2d is not None else None,
+            "person_id": 0,
+            "format": self.get_keypoint_format(),
+            "confidence": float(np.mean(keypoints_2d[:, 2])),
+            "metadata": {
+                "model": self.model_type,
+                "gender": self.gender,
+                "vertices": vertices,  # 3D mesh
+                "joints_3d": joints,  # 3D joints
+                "body_pose": body_pose,  # Pose parameters
+                "global_orient": global_orient,
+                "transl": transl,
+                "betas": betas,  # Shape parameters
+                "num_vertices": len(vertices),
+                "num_joints": len(joints),
             },
         }
 
     def _project_to_2d(
         self,
         joints_3d: np.ndarray,
-        image_shape: Tuple[int, int, int],
+        image_shape: tuple[int, int, int],
         focal_length: float = 5000.0,
     ) -> np.ndarray:
         """Project 3D joints to 2D image coordinates.
@@ -305,7 +347,7 @@ class SMPLEstimator(BasePoseEstimator):
 
         return joints_2d
 
-    def _calculate_bbox_from_joints(self, joints: np.ndarray) -> List[float]:
+    def _calculate_bbox_from_joints(self, joints: np.ndarray) -> list[float]:
         """Calculate bounding box from 3D joints.
 
         Args:
@@ -360,14 +402,25 @@ class SMPLEstimator(BasePoseEstimator):
 
         # Draw skeleton connections (simplified)
         skeleton = [
-            (0, 1), (0, 2), (0, 3),  # Pelvis to hips and spine
-            (1, 4), (2, 5), (3, 6),  # Hips to knees, spine
-            (4, 7), (5, 8), (6, 9),  # Knees to ankles, spine
-            (9, 12), (12, 15),       # Spine to neck to head
-            (9, 13), (9, 14),        # Spine to collars
-            (13, 16), (14, 17),      # Collars to shoulders
-            (16, 18), (17, 19),      # Shoulders to elbows
-            (18, 20), (19, 21),      # Elbows to wrists
+            (0, 1),
+            (0, 2),
+            (0, 3),  # Pelvis to hips and spine
+            (1, 4),
+            (2, 5),
+            (3, 6),  # Hips to knees, spine
+            (4, 7),
+            (5, 8),
+            (6, 9),  # Knees to ankles, spine
+            (9, 12),
+            (12, 15),  # Spine to neck to head
+            (9, 13),
+            (9, 14),  # Spine to collars
+            (13, 16),
+            (14, 17),  # Collars to shoulders
+            (16, 18),
+            (17, 19),  # Shoulders to elbows
+            (18, 20),
+            (19, 21),  # Elbows to wrists
         ]
 
         for start_idx, end_idx in skeleton:
@@ -384,7 +437,7 @@ class SMPLEstimator(BasePoseEstimator):
 
     def get_keypoint_format(self) -> KeypointFormat:
         """Get keypoint format."""
-        if self.model_type == 'smpl':
+        if self.model_type == "smpl":
             return KeypointFormat.SMPL_24
         else:
             return KeypointFormat.SMPL_X_127
@@ -397,7 +450,7 @@ class SMPLEstimator(BasePoseEstimator):
         """SMPL/SMPL-X is single-person (per instance)."""
         return False
 
-    def get_3d_mesh(self, pose_data: Dict) -> Optional[np.ndarray]:
+    def get_3d_mesh(self, pose_data: dict) -> np.ndarray | None:
         """Get 3D mesh vertices from pose data.
 
         Args:
@@ -406,9 +459,9 @@ class SMPLEstimator(BasePoseEstimator):
         Returns:
             3D mesh vertices (Nx3) or None.
         """
-        return pose_data.get('metadata', {}).get('vertices')
+        return pose_data.get("metadata", {}).get("vertices")
 
-    def get_3d_joints(self, pose_data: Dict) -> Optional[np.ndarray]:
+    def get_3d_joints(self, pose_data: dict) -> np.ndarray | None:
         """Get 3D joint locations from pose data.
 
         Args:
@@ -417,9 +470,9 @@ class SMPLEstimator(BasePoseEstimator):
         Returns:
             3D joints (Nx3) or None.
         """
-        return pose_data.get('metadata', {}).get('joints_3d')
+        return pose_data.get("metadata", {}).get("joints_3d")
 
-    def get_shape_parameters(self, pose_data: Dict) -> Optional[np.ndarray]:
+    def get_shape_parameters(self, pose_data: dict) -> np.ndarray | None:
         """Get body shape parameters.
 
         Args:
@@ -428,9 +481,9 @@ class SMPLEstimator(BasePoseEstimator):
         Returns:
             Shape parameters (betas) or None.
         """
-        return pose_data.get('metadata', {}).get('betas')
+        return pose_data.get("metadata", {}).get("betas")
 
-    def get_pose_parameters(self, pose_data: Dict) -> Dict[str, np.ndarray]:
+    def get_pose_parameters(self, pose_data: dict) -> dict[str, np.ndarray]:
         """Get all pose parameters.
 
         Args:
@@ -439,11 +492,11 @@ class SMPLEstimator(BasePoseEstimator):
         Returns:
             Dictionary with pose parameters.
         """
-        metadata = pose_data.get('metadata', {})
+        metadata = pose_data.get("metadata", {})
         return {
-            'body_pose': metadata.get('body_pose'),
-            'global_orient': metadata.get('global_orient'),
-            'transl': metadata.get('transl'),
+            "body_pose": metadata.get("body_pose"),
+            "global_orient": metadata.get("global_orient"),
+            "transl": metadata.get("transl"),
         }
 
     def _get_default_model_path(self) -> str:
@@ -466,7 +519,7 @@ class SMPLEstimator(BasePoseEstimator):
         # Return default path
         return "models/smplx"
 
-    def save_mesh(self, pose_data: Dict, output_path: str, format: str = "obj"):
+    def save_mesh(self, pose_data: dict, output_path: str, format: str = "obj"):
         """Save 3D mesh to file.
 
         Args:
@@ -489,7 +542,7 @@ class SMPLEstimator(BasePoseEstimator):
 
     def _save_obj(self, vertices: np.ndarray, faces: np.ndarray, path: str):
         """Save mesh as OBJ file."""
-        with open(path, 'w') as f:
+        with open(path, "w") as f:
             # Write vertices
             for v in vertices:
                 f.write(f"v {v[0]:.6f} {v[1]:.6f} {v[2]:.6f}\n")
@@ -500,7 +553,7 @@ class SMPLEstimator(BasePoseEstimator):
 
     def _save_ply(self, vertices: np.ndarray, faces: np.ndarray, path: str):
         """Save mesh as PLY file."""
-        with open(path, 'w') as f:
+        with open(path, "w") as f:
             # Header
             f.write("ply\n")
             f.write("format ascii 1.0\n")

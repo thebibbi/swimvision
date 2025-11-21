@@ -4,10 +4,10 @@ Combines predictions from multiple pose estimation models to improve
 accuracy and robustness, especially for challenging underwater scenarios.
 """
 
-from typing import Dict, List, Optional, Tuple
-from enum import Enum
-import numpy as np
 from dataclasses import dataclass
+from enum import Enum
+
+import numpy as np
 
 from src.pose.base_estimator import (
     BasePoseEstimator,
@@ -18,24 +18,26 @@ from src.pose.base_estimator import (
 
 class FusionMethod(Enum):
     """Fusion methods for combining predictions."""
-    WEIGHTED_AVERAGE = "weighted_average"      # Confidence-weighted averaging
-    MEDIAN = "median"                          # Median of predictions
-    MAX_CONFIDENCE = "max_confidence"          # Take highest confidence
-    KALMAN_FUSION = "kalman_fusion"           # Kalman filter fusion
-    LEARNED_FUSION = "learned_fusion"         # Machine learning fusion
+
+    WEIGHTED_AVERAGE = "weighted_average"  # Confidence-weighted averaging
+    MEDIAN = "median"  # Median of predictions
+    MAX_CONFIDENCE = "max_confidence"  # Take highest confidence
+    KALMAN_FUSION = "kalman_fusion"  # Kalman filter fusion
+    LEARNED_FUSION = "learned_fusion"  # Machine learning fusion
 
 
 @dataclass
 class FusedPrediction:
     """Result of multi-model fusion."""
-    keypoints: np.ndarray                      # Fused keypoints (Nx3)
-    keypoint_names: List[str]                  # Keypoint names
-    bbox: List[float]                          # Bounding box
-    format: KeypointFormat                     # Output format
-    confidence_scores: Dict[str, float]        # Per-model confidence
-    contributing_models: List[str]             # Models that contributed
-    fusion_method: FusionMethod                # Fusion method used
-    metadata: Dict                             # Additional metadata
+
+    keypoints: np.ndarray  # Fused keypoints (Nx3)
+    keypoint_names: list[str]  # Keypoint names
+    bbox: list[float]  # Bounding box
+    format: KeypointFormat  # Output format
+    confidence_scores: dict[str, float]  # Per-model confidence
+    contributing_models: list[str]  # Models that contributed
+    fusion_method: FusionMethod  # Fusion method used
+    metadata: dict  # Additional metadata
 
 
 class MultiModelFusion:
@@ -43,7 +45,7 @@ class MultiModelFusion:
 
     def __init__(
         self,
-        models: List[BasePoseEstimator],
+        models: list[BasePoseEstimator],
         fusion_method: FusionMethod = FusionMethod.WEIGHTED_AVERAGE,
         target_format: KeypointFormat = KeypointFormat.COCO_17,
         min_models: int = 1,
@@ -71,7 +73,7 @@ class MultiModelFusion:
         self,
         image: np.ndarray,
         return_image: bool = True,
-    ) -> Tuple[Optional[FusedPrediction], Optional[np.ndarray]]:
+    ) -> tuple[FusedPrediction | None, np.ndarray | None]:
         """Estimate pose using model fusion.
 
         Args:
@@ -96,14 +98,16 @@ class MultiModelFusion:
 
                     if pose_data is not None:
                         # Convert to target format
-                        if pose_data['format'] != self.target_format:
+                        if pose_data["format"] != self.target_format:
                             pose_data = self._convert_format(pose_data)
 
-                        predictions.append({
-                            'model_name': model.model_name,
-                            'pose_data': pose_data,
-                            'weight': self.model_weights.get(model.model_name, 1.0),
-                        })
+                        predictions.append(
+                            {
+                                "model_name": model.model_name,
+                                "pose_data": pose_data,
+                                "weight": self.model_weights.get(model.model_name, 1.0),
+                            }
+                        )
 
                         if annotated is not None:
                             annotated_images.append(annotated)
@@ -133,7 +137,7 @@ class MultiModelFusion:
 
         return fused, annotated_image
 
-    def _fuse_predictions(self, predictions: List[Dict]) -> FusedPrediction:
+    def _fuse_predictions(self, predictions: list[dict]) -> FusedPrediction:
         """Fuse multiple predictions into one.
 
         Args:
@@ -154,7 +158,7 @@ class MultiModelFusion:
             # Default to weighted average
             return self._weighted_average_fusion(predictions)
 
-    def _weighted_average_fusion(self, predictions: List[Dict]) -> FusedPrediction:
+    def _weighted_average_fusion(self, predictions: list[dict]) -> FusedPrediction:
         """Fuse using confidence-weighted averaging.
 
         Args:
@@ -172,9 +176,9 @@ class MultiModelFusion:
 
         # Accumulate weighted predictions
         for pred in predictions:
-            pose_data = pred['pose_data']
-            model_weight = pred['weight']
-            keypoints = pose_data['keypoints']
+            pose_data = pred["pose_data"]
+            model_weight = pred["weight"]
+            keypoints = pose_data["keypoints"]
 
             for i in range(min(num_keypoints, len(keypoints))):
                 kp = keypoints[i]
@@ -197,9 +201,9 @@ class MultiModelFusion:
         # Calculate overall confidence scores
         confidence_scores = {}
         for pred in predictions:
-            model_name = pred['model_name']
-            pose_data = pred['pose_data']
-            avg_conf = np.mean(pose_data['keypoints'][:, 2])
+            model_name = pred["model_name"]
+            pose_data = pred["pose_data"]
+            avg_conf = np.mean(pose_data["keypoints"][:, 2])
             confidence_scores[model_name] = float(avg_conf)
 
         # Calculate bounding box
@@ -211,15 +215,15 @@ class MultiModelFusion:
             bbox=bbox,
             format=self.target_format,
             confidence_scores=confidence_scores,
-            contributing_models=[p['model_name'] for p in predictions],
+            contributing_models=[p["model_name"] for p in predictions],
             fusion_method=self.fusion_method,
             metadata={
-                'num_models': len(predictions),
-                'fusion_weights': {p['model_name']: p['weight'] for p in predictions},
+                "num_models": len(predictions),
+                "fusion_weights": {p["model_name"]: p["weight"] for p in predictions},
             },
         )
 
-    def _median_fusion(self, predictions: List[Dict]) -> FusedPrediction:
+    def _median_fusion(self, predictions: list[dict]) -> FusedPrediction:
         """Fuse using median of predictions.
 
         Args:
@@ -236,7 +240,7 @@ class MultiModelFusion:
             x_values, y_values, conf_values = [], [], []
 
             for pred in predictions:
-                keypoints = pred['pose_data']['keypoints']
+                keypoints = pred["pose_data"]["keypoints"]
                 if i < len(keypoints):
                     kp = keypoints[i]
                     if kp[2] > self.confidence_threshold:
@@ -253,9 +257,9 @@ class MultiModelFusion:
         # Calculate confidence scores
         confidence_scores = {}
         for pred in predictions:
-            model_name = pred['model_name']
-            pose_data = pred['pose_data']
-            avg_conf = np.mean(pose_data['keypoints'][:, 2])
+            model_name = pred["model_name"]
+            pose_data = pred["pose_data"]
+            avg_conf = np.mean(pose_data["keypoints"][:, 2])
             confidence_scores[model_name] = float(avg_conf)
 
         bbox = self._calculate_bbox(fused_keypoints)
@@ -266,12 +270,12 @@ class MultiModelFusion:
             bbox=bbox,
             format=self.target_format,
             confidence_scores=confidence_scores,
-            contributing_models=[p['model_name'] for p in predictions],
+            contributing_models=[p["model_name"] for p in predictions],
             fusion_method=self.fusion_method,
-            metadata={'num_models': len(predictions)},
+            metadata={"num_models": len(predictions)},
         )
 
-    def _max_confidence_fusion(self, predictions: List[Dict]) -> FusedPrediction:
+    def _max_confidence_fusion(self, predictions: list[dict]) -> FusedPrediction:
         """Fuse by taking highest confidence prediction for each keypoint.
 
         Args:
@@ -289,7 +293,7 @@ class MultiModelFusion:
             best_kp = None
 
             for pred in predictions:
-                keypoints = pred['pose_data']['keypoints']
+                keypoints = pred["pose_data"]["keypoints"]
                 if i < len(keypoints):
                     kp = keypoints[i]
                     if kp[2] > best_conf:
@@ -301,9 +305,9 @@ class MultiModelFusion:
 
         confidence_scores = {}
         for pred in predictions:
-            model_name = pred['model_name']
-            pose_data = pred['pose_data']
-            avg_conf = np.mean(pose_data['keypoints'][:, 2])
+            model_name = pred["model_name"]
+            pose_data = pred["pose_data"]
+            avg_conf = np.mean(pose_data["keypoints"][:, 2])
             confidence_scores[model_name] = float(avg_conf)
 
         bbox = self._calculate_bbox(fused_keypoints)
@@ -314,12 +318,12 @@ class MultiModelFusion:
             bbox=bbox,
             format=self.target_format,
             confidence_scores=confidence_scores,
-            contributing_models=[p['model_name'] for p in predictions],
+            contributing_models=[p["model_name"] for p in predictions],
             fusion_method=self.fusion_method,
-            metadata={'num_models': len(predictions)},
+            metadata={"num_models": len(predictions)},
         )
 
-    def _kalman_fusion(self, predictions: List[Dict]) -> FusedPrediction:
+    def _kalman_fusion(self, predictions: list[dict]) -> FusedPrediction:
         """Fuse using Kalman filtering approach.
 
         Args:
@@ -340,7 +344,7 @@ class MultiModelFusion:
             uncertainties = []
 
             for pred in predictions:
-                keypoints = pred['pose_data']['keypoints']
+                keypoints = pred["pose_data"]["keypoints"]
                 if i < len(keypoints):
                     kp = keypoints[i]
                     if kp[2] > self.confidence_threshold:
@@ -358,17 +362,23 @@ class MultiModelFusion:
                 weights /= np.sum(weights)
 
                 fused_pos = np.sum(measurements * weights[:, np.newaxis], axis=0)
-                fused_conf = np.mean([kp[2] for pred in predictions
-                                     for kp in [pred['pose_data']['keypoints'][i]]
-                                     if i < len(pred['pose_data']['keypoints']) and kp[2] > self.confidence_threshold])
+                fused_conf = np.mean(
+                    [
+                        kp[2]
+                        for pred in predictions
+                        for kp in [pred["pose_data"]["keypoints"][i]]
+                        if i < len(pred["pose_data"]["keypoints"])
+                        and kp[2] > self.confidence_threshold
+                    ]
+                )
 
                 fused_keypoints[i] = [fused_pos[0], fused_pos[1], fused_conf]
 
         confidence_scores = {}
         for pred in predictions:
-            model_name = pred['model_name']
-            pose_data = pred['pose_data']
-            avg_conf = np.mean(pose_data['keypoints'][:, 2])
+            model_name = pred["model_name"]
+            pose_data = pred["pose_data"]
+            avg_conf = np.mean(pose_data["keypoints"][:, 2])
             confidence_scores[model_name] = float(avg_conf)
 
         bbox = self._calculate_bbox(fused_keypoints)
@@ -379,12 +389,12 @@ class MultiModelFusion:
             bbox=bbox,
             format=self.target_format,
             confidence_scores=confidence_scores,
-            contributing_models=[p['model_name'] for p in predictions],
+            contributing_models=[p["model_name"] for p in predictions],
             fusion_method=self.fusion_method,
-            metadata={'num_models': len(predictions)},
+            metadata={"num_models": len(predictions)},
         )
 
-    def _convert_format(self, pose_data: Dict) -> Dict:
+    def _convert_format(self, pose_data: dict) -> dict:
         """Convert pose data to target format.
 
         Args:
@@ -393,7 +403,7 @@ class MultiModelFusion:
         Returns:
             Pose data in target format.
         """
-        source_format = pose_data['format']
+        source_format = pose_data["format"]
 
         if source_format == self.target_format:
             return pose_data
@@ -401,20 +411,20 @@ class MultiModelFusion:
         # Convert to COCO-17 (our common format)
         if self.target_format == KeypointFormat.COCO_17:
             keypoints = map_keypoints_to_coco17(
-                pose_data['keypoints'],
+                pose_data["keypoints"],
                 source_format,
             )
 
             return {
                 **pose_data,
-                'keypoints': keypoints,
-                'format': KeypointFormat.COCO_17,
+                "keypoints": keypoints,
+                "format": KeypointFormat.COCO_17,
             }
 
         # TODO: Add other format conversions as needed
         return pose_data
 
-    def _calculate_bbox(self, keypoints: np.ndarray) -> List[float]:
+    def _calculate_bbox(self, keypoints: np.ndarray) -> list[float]:
         """Calculate bounding box from keypoints.
 
         Args:
@@ -466,11 +476,22 @@ class MultiModelFusion:
 
         # COCO-17 skeleton
         skeleton = [
-            (0, 1), (0, 2), (1, 3), (2, 4),  # Head
+            (0, 1),
+            (0, 2),
+            (1, 3),
+            (2, 4),  # Head
             (5, 6),  # Shoulders
-            (5, 7), (7, 9), (6, 8), (8, 10),  # Arms
-            (5, 11), (6, 12), (11, 12),  # Torso
-            (11, 13), (13, 15), (12, 14), (14, 16),  # Legs
+            (5, 7),
+            (7, 9),
+            (6, 8),
+            (8, 10),  # Arms
+            (5, 11),
+            (6, 12),
+            (11, 12),  # Torso
+            (11, 13),
+            (13, 15),
+            (12, 14),
+            (14, 16),  # Legs
         ]
 
         # Draw skeleton
@@ -497,7 +518,9 @@ class MultiModelFusion:
         y_offset = 30
         for model_name, conf in fused.confidence_scores.items():
             text = f"{model_name}: {conf:.2f}"
-            cv2.putText(annotated, text, (10, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+            cv2.putText(
+                annotated, text, (10, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2
+            )
             y_offset += 25
 
         return annotated
@@ -513,9 +536,10 @@ class MultiModelFusion:
         }
         return mapping.get(format, 17)
 
-    def _get_keypoint_names(self, format: KeypointFormat) -> List[str]:
+    def _get_keypoint_names(self, format: KeypointFormat) -> list[str]:
         """Get keypoint names for format."""
         from src.pose.base_estimator import get_keypoint_names
+
         return get_keypoint_names(format)
 
     def set_model_weight(self, model_name: str, weight: float):
@@ -527,16 +551,16 @@ class MultiModelFusion:
         """
         self.model_weights[model_name] = weight
 
-    def get_model_statistics(self) -> Dict:
+    def get_model_statistics(self) -> dict:
         """Get statistics about contributing models.
 
         Returns:
             Dictionary with model statistics.
         """
         return {
-            'num_models': len(self.models),
-            'model_names': [m.model_name for m in self.models],
-            'model_weights': self.model_weights.copy(),
-            'fusion_method': self.fusion_method.value,
-            'target_format': self.target_format.value,
+            "num_models": len(self.models),
+            "model_names": [m.model_name for m in self.models],
+            "model_weights": self.model_weights.copy(),
+            "fusion_method": self.fusion_method.value,
+            "target_format": self.target_format.value,
         }

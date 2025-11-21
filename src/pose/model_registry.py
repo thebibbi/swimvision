@@ -4,19 +4,21 @@ Centralized management of all pose estimation models with unified interface,
 automatic model loading, caching, and configuration management.
 """
 
-from typing import Dict, List, Optional, Any
-from pathlib import Path
-from enum import Enum
-import yaml
 import json
-from dataclasses import dataclass, field
 import logging
+from dataclasses import dataclass, field
+from enum import Enum
+from pathlib import Path
+from typing import Any
+
+import yaml
 
 logger = logging.getLogger(__name__)
 
 
 class ModelFramework(Enum):
     """Supported model frameworks."""
+
     MMPOSE = "mmpose"
     ULTRALYTICS = "ultralytics"
     MEDIAPIPE = "mediapipe"
@@ -25,6 +27,7 @@ class ModelFramework(Enum):
 
 class ModelCapability(Enum):
     """Model capabilities."""
+
     POSE_2D = "pose_2d"
     POSE_3D = "pose_3d"
     MULTI_PERSON = "multi_person"
@@ -37,17 +40,18 @@ class ModelCapability(Enum):
 @dataclass
 class ModelConfig:
     """Configuration for a pose estimation model."""
+
     name: str
     framework: ModelFramework
-    config_file: Optional[str] = None
-    checkpoint_path: Optional[str] = None
+    config_file: str | None = None
+    checkpoint_path: str | None = None
     keypoint_format: str = "COCO_17"
     num_keypoints: int = 17
-    capabilities: List[ModelCapability] = field(default_factory=list)
+    capabilities: list[ModelCapability] = field(default_factory=list)
     fps_target: int = 30
     input_size: tuple = (256, 192)
     device_preference: str = "cuda"  # cuda, cpu, mps
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class ModelRegistry:
@@ -62,7 +66,7 @@ class ModelRegistry:
     """
 
     # Model definitions
-    MODELS: Dict[str, ModelConfig] = {
+    MODELS: dict[str, ModelConfig] = {
         # ===== RTMPose Models (MMPose) =====
         "rtmpose-t": ModelConfig(
             name="rtmpose-t",
@@ -75,10 +79,10 @@ class ModelRegistry:
             fps_target=90,
             input_size=(256, 192),
             metadata={
-                'url': 'https://download.openmmlab.com/mmpose/v1/projects/rtmposev1/rtmpose-t_simcc-coco_pt-aic-coco_420e-256x192-aff1f1fb_20230126.pth',
-                'description': 'Tiny RTMPose model for maximum speed',
-                'accuracy_ap': 68.5,
-            }
+                "url": "https://download.openmmlab.com/mmpose/v1/projects/rtmposev1/rtmpose-t_simcc-coco_pt-aic-coco_420e-256x192-aff1f1fb_20230126.pth",
+                "description": "Tiny RTMPose model for maximum speed",
+                "accuracy_ap": 68.5,
+            },
         ),
         "rtmpose-s": ModelConfig(
             name="rtmpose-s",
@@ -91,10 +95,10 @@ class ModelRegistry:
             fps_target=60,
             input_size=(256, 192),
             metadata={
-                'url': 'https://download.openmmlab.com/mmpose/v1/projects/rtmposev1/rtmpose-s_simcc-coco_pt-aic-coco_420e-256x192-8edcf0d7_20230127.pth',
-                'description': 'Small RTMPose model for balanced speed/accuracy',
-                'accuracy_ap': 72.2,
-            }
+                "url": "https://download.openmmlab.com/mmpose/v1/projects/rtmposev1/rtmpose-s_simcc-coco_pt-aic-coco_420e-256x192-8edcf0d7_20230127.pth",
+                "description": "Small RTMPose model for balanced speed/accuracy",
+                "accuracy_ap": 72.2,
+            },
         ),
         "rtmpose-m": ModelConfig(
             name="rtmpose-m",
@@ -107,10 +111,10 @@ class ModelRegistry:
             fps_target=45,
             input_size=(256, 192),
             metadata={
-                'url': 'https://download.openmmlab.com/mmpose/v1/projects/rtmposev1/rtmpose-m_simcc-coco_pt-aic-coco_420e-256x192-63eb25f7_20230126.pth',
-                'description': 'Medium RTMPose model for balanced performance',
-                'accuracy_ap': 75.8,
-            }
+                "url": "https://download.openmmlab.com/mmpose/v1/projects/rtmposev1/rtmpose-m_simcc-coco_pt-aic-coco_420e-256x192-63eb25f7_20230126.pth",
+                "description": "Medium RTMPose model for balanced performance",
+                "accuracy_ap": 75.8,
+            },
         ),
         "rtmpose-l": ModelConfig(
             name="rtmpose-l",
@@ -123,12 +127,11 @@ class ModelRegistry:
             fps_target=30,
             input_size=(256, 192),
             metadata={
-                'url': 'https://download.openmmlab.com/mmpose/v1/projects/rtmposev1/rtmpose-l_simcc-coco_pt-aic-coco_420e-256x192-f016ffe0_20230126.pth',
-                'description': 'Large RTMPose model for high accuracy',
-                'accuracy_ap': 76.7,
-            }
+                "url": "https://download.openmmlab.com/mmpose/v1/projects/rtmposev1/rtmpose-l_simcc-coco_pt-aic-coco_420e-256x192-f016ffe0_20230126.pth",
+                "description": "Large RTMPose model for high accuracy",
+                "accuracy_ap": 76.7,
+            },
         ),
-
         # ===== ViTPose Models (MMPose) =====
         "vitpose-b": ModelConfig(
             name="vitpose-b",
@@ -141,9 +144,9 @@ class ModelRegistry:
             fps_target=25,
             input_size=(256, 192),
             metadata={
-                'description': 'ViTPose Base - Vision Transformer backbone',
-                'accuracy_ap': 75.8,
-            }
+                "description": "ViTPose Base - Vision Transformer backbone",
+                "accuracy_ap": 75.8,
+            },
         ),
         "vitpose-l": ModelConfig(
             name="vitpose-l",
@@ -156,9 +159,9 @@ class ModelRegistry:
             fps_target=20,
             input_size=(256, 192),
             metadata={
-                'description': 'ViTPose Large - Higher accuracy',
-                'accuracy_ap': 78.3,
-            }
+                "description": "ViTPose Large - Higher accuracy",
+                "accuracy_ap": 78.3,
+            },
         ),
         "vitpose-h": ModelConfig(
             name="vitpose-h",
@@ -171,11 +174,10 @@ class ModelRegistry:
             fps_target=15,
             input_size=(256, 192),
             metadata={
-                'description': 'ViTPose Huge - Maximum accuracy',
-                'accuracy_ap': 81.1,
-            }
+                "description": "ViTPose Huge - Maximum accuracy",
+                "accuracy_ap": 81.1,
+            },
         ),
-
         # ===== YOLO Models (Ultralytics) =====
         "yolo11n-pose": ModelConfig(
             name="yolo11n-pose",
@@ -187,9 +189,9 @@ class ModelRegistry:
             fps_target=60,
             input_size=(640, 640),
             metadata={
-                'description': 'YOLO11 Nano - Fastest YOLO',
-                'accuracy_ap': 50.5,
-            }
+                "description": "YOLO11 Nano - Fastest YOLO",
+                "accuracy_ap": 50.5,
+            },
         ),
         "yolo11s-pose": ModelConfig(
             name="yolo11s-pose",
@@ -201,9 +203,9 @@ class ModelRegistry:
             fps_target=50,
             input_size=(640, 640),
             metadata={
-                'description': 'YOLO11 Small - Good balance',
-                'accuracy_ap': 59.2,
-            }
+                "description": "YOLO11 Small - Good balance",
+                "accuracy_ap": 59.2,
+            },
         ),
         "yolo11m-pose": ModelConfig(
             name="yolo11m-pose",
@@ -215,11 +217,10 @@ class ModelRegistry:
             fps_target=40,
             input_size=(640, 640),
             metadata={
-                'description': 'YOLO11 Medium - Higher accuracy',
-                'accuracy_ap': 66.0,
-            }
+                "description": "YOLO11 Medium - Higher accuracy",
+                "accuracy_ap": 66.0,
+            },
         ),
-
         # ===== MediaPipe (Google) =====
         "mediapipe": ModelConfig(
             name="mediapipe",
@@ -230,11 +231,10 @@ class ModelRegistry:
             fps_target=30,
             input_size=(256, 256),
             metadata={
-                'description': 'MediaPipe Pose - Real-time 3D',
-                'complexity_levels': [0, 1, 2],
-            }
+                "description": "MediaPipe Pose - Real-time 3D",
+                "complexity_levels": [0, 1, 2],
+            },
         ),
-
         # ===== Custom Models =====
         "openpose": ModelConfig(
             name="openpose",
@@ -250,8 +250,8 @@ class ModelRegistry:
             fps_target=20,
             input_size=(368, 368),
             metadata={
-                'description': 'OpenPose - Multi-person with hands/face',
-            }
+                "description": "OpenPose - Multi-person with hands/face",
+            },
         ),
         "alphapose": ModelConfig(
             name="alphapose",
@@ -262,9 +262,9 @@ class ModelRegistry:
             fps_target=15,
             input_size=(256, 192),
             metadata={
-                'description': 'AlphaPose - Wholebody detection',
-                'variants': ['halpe26', 'coco', 'coco_wholebody'],
-            }
+                "description": "AlphaPose - Wholebody detection",
+                "variants": ["halpe26", "coco", "coco_wholebody"],
+            },
         ),
         "smpl-x": ModelConfig(
             name="smpl-x",
@@ -278,9 +278,9 @@ class ModelRegistry:
             fps_target=10,
             input_size=(224, 224),
             metadata={
-                'description': 'SMPL-X - 3D body mesh',
-                'mesh_vertices': 10475,
-            }
+                "description": "SMPL-X - 3D body mesh",
+                "mesh_vertices": 10475,
+            },
         ),
         "wham": ModelConfig(
             name="wham",
@@ -295,9 +295,9 @@ class ModelRegistry:
             fps_target=10,
             input_size=(224, 224),
             metadata={
-                'description': 'WHAM - World-grounded temporal pose estimation',
-                'requires_video': True,
-            }
+                "description": "WHAM - World-grounded temporal pose estimation",
+                "requires_video": True,
+            },
         ),
     }
 
@@ -312,7 +312,7 @@ class ModelRegistry:
         self.performance_stats = {}  # Track model performance
 
     @classmethod
-    def list_available_models(cls) -> List[str]:
+    def list_available_models(cls) -> list[str]:
         """Get list of all available model names."""
         return list(cls.MODELS.keys())
 
@@ -336,7 +336,7 @@ class ModelRegistry:
         return cls.MODELS[model_name]
 
     @classmethod
-    def filter_by_capability(cls, capability: ModelCapability) -> List[str]:
+    def filter_by_capability(cls, capability: ModelCapability) -> list[str]:
         """Filter models by capability.
 
         Args:
@@ -345,13 +345,10 @@ class ModelRegistry:
         Returns:
             List of model names with that capability.
         """
-        return [
-            name for name, config in cls.MODELS.items()
-            if capability in config.capabilities
-        ]
+        return [name for name, config in cls.MODELS.items() if capability in config.capabilities]
 
     @classmethod
-    def filter_by_speed(cls, min_fps: int) -> List[str]:
+    def filter_by_speed(cls, min_fps: int) -> list[str]:
         """Filter models by minimum FPS target.
 
         Args:
@@ -360,10 +357,7 @@ class ModelRegistry:
         Returns:
             List of model names meeting FPS target.
         """
-        return [
-            name for name, config in cls.MODELS.items()
-            if config.fps_target >= min_fps
-        ]
+        return [name for name, config in cls.MODELS.items() if config.fps_target >= min_fps]
 
     @classmethod
     def get_best_model(cls, criteria: str = "balanced") -> str:
@@ -385,9 +379,9 @@ class ModelRegistry:
         elif criteria == "accurate":
             # Use metadata accuracy if available
             accurate_models = [
-                (name, config.metadata.get('accuracy_ap', 0))
+                (name, config.metadata.get("accuracy_ap", 0))
                 for name, config in cls.MODELS.items()
-                if 'accuracy_ap' in config.metadata
+                if "accuracy_ap" in config.metadata
             ]
             if accurate_models:
                 return max(accurate_models, key=lambda x: x[1])[0]
@@ -458,8 +452,7 @@ class ModelRegistry:
 
         except ImportError:
             raise ImportError(
-                "MMPose not installed. Install with: "
-                "mim install mmengine mmcv mmpose"
+                "MMPose not installed. Install with: " "mim install mmengine mmcv mmpose"
             )
 
     def _load_yolo_model(self, config: ModelConfig, device: str) -> Any:
@@ -487,14 +480,17 @@ class ModelRegistry:
         """Load custom model."""
         if config.name == "openpose":
             from src.pose.openpose_estimator import OpenPoseEstimator
+
             return OpenPoseEstimator(device=device, confidence=0.5)
 
         elif config.name == "alphapose":
             from src.pose.alphapose_estimator import AlphaPoseEstimator
+
             return AlphaPoseEstimator(device=device, confidence=0.5)
 
         elif config.name == "smpl-x":
             from src.pose.smpl_estimator import SMPLEstimator
+
             return SMPLEstimator(model_type="smplx", device=device)
 
         elif config.name == "wham":
@@ -512,19 +508,19 @@ class ModelRegistry:
         """
         config_data = {
             name: {
-                'framework': config.framework.value,
-                'keypoint_format': config.keypoint_format,
-                'num_keypoints': config.num_keypoints,
-                'capabilities': [c.value for c in config.capabilities],
-                'fps_target': config.fps_target,
-                'input_size': config.input_size,
-                'metadata': config.metadata,
+                "framework": config.framework.value,
+                "keypoint_format": config.keypoint_format,
+                "num_keypoints": config.num_keypoints,
+                "capabilities": [c.value for c in config.capabilities],
+                "fps_target": config.fps_target,
+                "input_size": config.input_size,
+                "metadata": config.metadata,
             }
             for name, config in self.MODELS.items()
         }
 
-        with open(output_path, 'w') as f:
-            if output_path.endswith('.json'):
+        with open(output_path, "w") as f:
+            if output_path.endswith(".json"):
                 json.dump(config_data, f, indent=2)
             else:
                 yaml.dump(config_data, f, default_flow_style=False)

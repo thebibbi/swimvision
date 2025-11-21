@@ -4,15 +4,17 @@ Detects water surface boundary, entry/exit events, and integrates
 with occlusion detection for improved underwater tracking.
 """
 
-from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
 from enum import Enum
-import numpy as np
+from typing import Any
+
 import cv2
+import numpy as np
 
 
 class WaterState(Enum):
     """State of body part relative to water."""
+
     ABOVE_WATER = "above_water"
     AT_SURFACE = "at_surface"
     UNDERWATER = "underwater"
@@ -22,23 +24,25 @@ class WaterState(Enum):
 @dataclass
 class WaterSurfaceInfo:
     """Information about detected water surface."""
-    surface_line: np.ndarray                    # Fitted line (y = mx + b)
-    surface_points: np.ndarray                  # Detected surface points
-    confidence: float                           # Detection confidence
-    water_level: float                          # Average y-coordinate of surface
-    surface_normal: np.ndarray                  # Normal vector to surface
-    metadata: Dict                              # Additional metadata
+
+    surface_line: np.ndarray  # Fitted line (y = mx + b)
+    surface_points: np.ndarray  # Detected surface points
+    confidence: float  # Detection confidence
+    water_level: float  # Average y-coordinate of surface
+    surface_normal: np.ndarray  # Normal vector to surface
+    metadata: dict  # Additional metadata
 
 
 @dataclass
 class EntryExitEvent:
     """Water entry/exit event."""
-    frame_number: int                           # Frame where event occurred
-    event_type: str                             # 'entry' or 'exit'
-    body_part: str                              # Which body part
-    position: Tuple[float, float]               # (x, y) position
-    velocity: Optional[Tuple[float, float]]     # Velocity at entry/exit
-    splash_intensity: float                     # Estimated splash intensity
+
+    frame_number: int  # Frame where event occurred
+    event_type: str  # 'entry' or 'exit'
+    body_part: str  # Which body part
+    position: tuple[float, float]  # (x, y) position
+    velocity: tuple[float, float] | None  # Velocity at entry/exit
+    splash_intensity: float  # Estimated splash intensity
 
 
 class WaterSurfaceDetector:
@@ -65,18 +69,18 @@ class WaterSurfaceDetector:
         self.surface_smoothing = surface_smoothing
 
         # History for temporal smoothing
-        self.surface_history = []
-        self.water_level_history = []
+        self.surface_history: list[WaterSurfaceInfo] = []
+        self.water_level_history: list[float] = []
 
         # Entry/exit event tracking
-        self.tracked_body_parts = {}
-        self.entry_exit_events = []
+        self.tracked_body_parts: dict[str, Any] = {}
+        self.entry_exit_events: list[dict[str, Any]] = []
 
     def detect_surface(
         self,
         frame: np.ndarray,
-        previous_surface: Optional[WaterSurfaceInfo] = None,
-    ) -> Optional[WaterSurfaceInfo]:
+        previous_surface: WaterSurfaceInfo | None = None,
+    ) -> WaterSurfaceInfo | None:
         """Detect water surface in frame.
 
         Args:
@@ -104,8 +108,8 @@ class WaterSurfaceDetector:
     def _detect_surface_edges(
         self,
         frame: np.ndarray,
-        previous_surface: Optional[WaterSurfaceInfo] = None,
-    ) -> Optional[WaterSurfaceInfo]:
+        previous_surface: WaterSurfaceInfo | None = None,
+    ) -> WaterSurfaceInfo | None:
         """Detect water surface using edge detection.
 
         Args:
@@ -125,16 +129,14 @@ class WaterSurfaceDetector:
         edges = cv2.Canny(blurred, 50, 150)
 
         # Focus on horizontal edges (water surface is typically horizontal)
-        kernel_horizontal = np.array([[1, 1, 1],
-                                      [0, 0, 0],
-                                      [-1, -1, -1]])
+        kernel_horizontal = np.array([[1, 1, 1], [0, 0, 0], [-1, -1, -1]])
         horizontal_edges = cv2.filter2D(edges, -1, kernel_horizontal)
 
         # Find strong horizontal lines using Hough transform
         lines = cv2.HoughLinesP(
             horizontal_edges,
             rho=1,
-            theta=np.pi/180,
+            theta=np.pi / 180,
             threshold=50,
             minLineLength=100,
             maxLineGap=50,
@@ -150,7 +152,7 @@ class WaterSurfaceDetector:
             angle = np.abs(np.arctan2(y2 - y1, x2 - x1))
 
             # Accept lines within 20 degrees of horizontal
-            if angle < np.pi/9 or angle > 8*np.pi/9:
+            if angle < np.pi / 9 or angle > 8 * np.pi / 9:
                 horizontal_lines.append(line[0])
 
         if len(horizontal_lines) == 0:
@@ -205,9 +207,9 @@ class WaterSurfaceDetector:
                 water_level=water_level,
                 surface_normal=surface_normal,
                 metadata={
-                    'method': 'edge',
-                    'num_points': len(surface_points),
-                    'num_lines': len(horizontal_lines),
+                    "method": "edge",
+                    "num_points": len(surface_points),
+                    "num_lines": len(horizontal_lines),
                 },
             )
 
@@ -216,8 +218,8 @@ class WaterSurfaceDetector:
     def _detect_surface_color(
         self,
         frame: np.ndarray,
-        previous_surface: Optional[WaterSurfaceInfo] = None,
-    ) -> Optional[WaterSurfaceInfo]:
+        previous_surface: WaterSurfaceInfo | None = None,
+    ) -> WaterSurfaceInfo | None:
         """Detect water surface using color segmentation.
 
         Args:
@@ -290,16 +292,16 @@ class WaterSurfaceDetector:
             water_level=water_level,
             surface_normal=surface_normal,
             metadata={
-                'method': 'color',
-                'num_points': len(surface_points),
+                "method": "color",
+                "num_points": len(surface_points),
             },
         )
 
     def _detect_surface_flow(
         self,
         frame: np.ndarray,
-        previous_surface: Optional[WaterSurfaceInfo] = None,
-    ) -> Optional[WaterSurfaceInfo]:
+        previous_surface: WaterSurfaceInfo | None = None,
+    ) -> WaterSurfaceInfo | None:
         """Detect water surface using optical flow (detects motion discontinuity).
 
         Args:
@@ -316,8 +318,8 @@ class WaterSurfaceDetector:
     def _detect_surface_hybrid(
         self,
         frame: np.ndarray,
-        previous_surface: Optional[WaterSurfaceInfo] = None,
-    ) -> Optional[WaterSurfaceInfo]:
+        previous_surface: WaterSurfaceInfo | None = None,
+    ) -> WaterSurfaceInfo | None:
         """Detect water surface using hybrid approach.
 
         Args:
@@ -340,16 +342,24 @@ class WaterSurfaceDetector:
 
             if total_weight > 0:
                 # Weighted average of water levels
-                water_level = (w1 * edge_surface.water_level + w2 * color_surface.water_level) / total_weight
+                water_level = (
+                    w1 * edge_surface.water_level + w2 * color_surface.water_level
+                ) / total_weight
 
                 # Weighted average of line parameters
-                line_m = (w1 * edge_surface.surface_line[0] + w2 * color_surface.surface_line[0]) / total_weight
-                line_b = (w1 * edge_surface.surface_line[1] + w2 * color_surface.surface_line[1]) / total_weight
+                line_m = (
+                    w1 * edge_surface.surface_line[0] + w2 * color_surface.surface_line[0]
+                ) / total_weight
+                line_b = (
+                    w1 * edge_surface.surface_line[1] + w2 * color_surface.surface_line[1]
+                ) / total_weight
 
                 surface_line = np.array([line_m, line_b])
 
                 # Combine surface points
-                combined_points = np.vstack([edge_surface.surface_points, color_surface.surface_points])
+                combined_points = np.vstack(
+                    [edge_surface.surface_points, color_surface.surface_points]
+                )
 
                 # Average confidence
                 confidence = (w1 + w2) / 2
@@ -364,9 +374,9 @@ class WaterSurfaceDetector:
                     water_level=water_level,
                     surface_normal=surface_normal,
                     metadata={
-                        'method': 'hybrid',
-                        'edge_confidence': edge_surface.confidence,
-                        'color_confidence': color_surface.confidence,
+                        "method": "hybrid",
+                        "edge_confidence": edge_surface.confidence,
+                        "color_confidence": color_surface.confidence,
                     },
                 )
 
@@ -415,14 +425,14 @@ class WaterSurfaceDetector:
             surface_normal=smoothed_normal,
             metadata={
                 **surface_info.metadata,
-                'smoothed': True,
-                'history_size': len(self.surface_history),
+                "smoothed": True,
+                "history_size": len(self.surface_history),
             },
         )
 
     def get_water_state(
         self,
-        point: Tuple[float, float],
+        point: tuple[float, float],
         surface_info: WaterSurfaceInfo,
         threshold_pixels: float = 10.0,
     ) -> WaterState:
@@ -457,11 +467,11 @@ class WaterSurfaceDetector:
     def detect_entry_exit_events(
         self,
         keypoints: np.ndarray,
-        keypoint_names: List[str],
+        keypoint_names: list[str],
         surface_info: WaterSurfaceInfo,
         frame_number: int,
-        velocities: Optional[np.ndarray] = None,
-    ) -> List[EntryExitEvent]:
+        velocities: np.ndarray | None = None,
+    ) -> list[EntryExitEvent]:
         """Detect water entry/exit events for keypoints.
 
         Args:
@@ -476,7 +486,7 @@ class WaterSurfaceDetector:
         """
         events = []
 
-        for i, (kp, name) in enumerate(zip(keypoints, keypoint_names)):
+        for i, (kp, name) in enumerate(zip(keypoints, keypoint_names, strict=False)):
             if kp[2] < 0.3:  # Low confidence, skip
                 continue
 
@@ -491,9 +501,15 @@ class WaterSurfaceDetector:
                 if previous_state != current_state:
                     event_type = None
 
-                    if previous_state == WaterState.ABOVE_WATER and current_state in [WaterState.AT_SURFACE, WaterState.UNDERWATER]:
+                    if previous_state == WaterState.ABOVE_WATER and current_state in [
+                        WaterState.AT_SURFACE,
+                        WaterState.UNDERWATER,
+                    ]:
                         event_type = "entry"
-                    elif previous_state == WaterState.UNDERWATER and current_state in [WaterState.AT_SURFACE, WaterState.ABOVE_WATER]:
+                    elif previous_state == WaterState.UNDERWATER and current_state in [
+                        WaterState.AT_SURFACE,
+                        WaterState.ABOVE_WATER,
+                    ]:
                         event_type = "exit"
 
                     if event_type:

@@ -2,9 +2,9 @@
 
 # YOLO11 Pose Settings
 yolo:
-  model: "yolo11n-pose.pt"  # Options: yolo11n-pose, yolo11s-pose, yolo11m-pose
-  device: "cpu"              # Options: cpu, cuda, mps (for Apple Silicon)
-  confidence: 0.5            # Minimum confidence threshold (0.0-1.0)
+  model: yolo11n-pose.pt    # Options: yolo11n-pose, yolo11s-pose, yolo11m-pose
+  device: cpu                # Options: cpu, cuda, mps (for Apple Silicon)
+  confidence: 0.01           # Minimum confidence threshold (0.0-1.0) - very low for swimming videos
   iou: 0.7                   # IoU threshold for NMS
   max_det: 1                 # Maximum number of detections (1 for single swimmer)
   imgsz: 640                 # Input image size (higher = more accurate, slower)
@@ -45,11 +45,11 @@ coco_keypoints:
 swimming:
   min_keypoint_confidence: 0.3  # Minimum confidence for individual keypoints
   required_keypoints:           # Keypoints required for valid pose
-    - left_shoulder
-    - right_shoulder
-    - left_elbow
-    - right_elbow
-    - left_wrist
-    - right_wrist
-    - left_hip
-    - right_hip
+  - left_shoulder
+  - right_shoulder
+  - left_elbow
+  - right_elbow
+  - left_wrist
+  - right_wrist
+  - left_hip
+  - right_hip

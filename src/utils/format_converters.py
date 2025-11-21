@@ -8,9 +8,7 @@ Handles conversions between different keypoint formats:
 - And more...
 """
 
-from typing import Dict, List, Optional, Tuple
 import numpy as np
-from enum import Enum
 
 from src.pose.base_estimator import KeypointFormat
 
@@ -20,43 +18,51 @@ class KeypointConverter:
 
     # COCO-17 keypoint names
     COCO17_NAMES = [
-        'nose',
-        'left_eye', 'right_eye',
-        'left_ear', 'right_ear',
-        'left_shoulder', 'right_shoulder',
-        'left_elbow', 'right_elbow',
-        'left_wrist', 'right_wrist',
-        'left_hip', 'right_hip',
-        'left_knee', 'right_knee',
-        'left_ankle', 'right_ankle',
+        "nose",
+        "left_eye",
+        "right_eye",
+        "left_ear",
+        "right_ear",
+        "left_shoulder",
+        "right_shoulder",
+        "left_elbow",
+        "right_elbow",
+        "left_wrist",
+        "right_wrist",
+        "left_hip",
+        "right_hip",
+        "left_knee",
+        "right_knee",
+        "left_ankle",
+        "right_ankle",
     ]
 
     # SMPL-24 joint names
     SMPL24_NAMES = [
-        'pelvis',           # 0
-        'left_hip',         # 1
-        'right_hip',        # 2
-        'spine1',           # 3
-        'left_knee',        # 4
-        'right_knee',       # 5
-        'spine2',           # 6
-        'left_ankle',       # 7
-        'right_ankle',      # 8
-        'spine3',           # 9
-        'left_foot',        # 10
-        'right_foot',       # 11
-        'neck',             # 12
-        'left_collar',      # 13
-        'right_collar',     # 14
-        'head',             # 15
-        'left_shoulder',    # 16
-        'right_shoulder',   # 17
-        'left_elbow',       # 18
-        'right_elbow',      # 19
-        'left_wrist',       # 20
-        'right_wrist',      # 21
-        'left_hand',        # 22
-        'right_hand',       # 23
+        "pelvis",  # 0
+        "left_hip",  # 1
+        "right_hip",  # 2
+        "spine1",  # 3
+        "left_knee",  # 4
+        "right_knee",  # 5
+        "spine2",  # 6
+        "left_ankle",  # 7
+        "right_ankle",  # 8
+        "spine3",  # 9
+        "left_foot",  # 10
+        "right_foot",  # 11
+        "neck",  # 12
+        "left_collar",  # 13
+        "right_collar",  # 14
+        "head",  # 15
+        "left_shoulder",  # 16
+        "right_shoulder",  # 17
+        "left_elbow",  # 18
+        "right_elbow",  # 19
+        "left_wrist",  # 20
+        "right_wrist",  # 21
+        "left_hand",  # 22
+        "right_hand",  # 23
     ]
 
     @staticmethod
@@ -78,27 +84,25 @@ class KeypointConverter:
         #       9=l_wrist, 10=r_wrist, 11=l_hip, 12=r_hip,
         #       13=l_knee, 14=r_knee, 15=l_ankle, 16=r_ankle
 
-        smpl_keypoints[16] = coco_keypoints[5]   # left_shoulder
-        smpl_keypoints[17] = coco_keypoints[6]   # right_shoulder
-        smpl_keypoints[18] = coco_keypoints[7]   # left_elbow
-        smpl_keypoints[19] = coco_keypoints[8]   # right_elbow
-        smpl_keypoints[20] = coco_keypoints[9]   # left_wrist
+        smpl_keypoints[16] = coco_keypoints[5]  # left_shoulder
+        smpl_keypoints[17] = coco_keypoints[6]  # right_shoulder
+        smpl_keypoints[18] = coco_keypoints[7]  # left_elbow
+        smpl_keypoints[19] = coco_keypoints[8]  # right_elbow
+        smpl_keypoints[20] = coco_keypoints[9]  # left_wrist
         smpl_keypoints[21] = coco_keypoints[10]  # right_wrist
-        smpl_keypoints[1] = coco_keypoints[11]   # left_hip
-        smpl_keypoints[2] = coco_keypoints[12]   # right_hip
-        smpl_keypoints[4] = coco_keypoints[13]   # left_knee
-        smpl_keypoints[5] = coco_keypoints[14]   # right_knee
-        smpl_keypoints[7] = coco_keypoints[15]   # left_ankle
-        smpl_keypoints[8] = coco_keypoints[16]   # right_ankle
+        smpl_keypoints[1] = coco_keypoints[11]  # left_hip
+        smpl_keypoints[2] = coco_keypoints[12]  # right_hip
+        smpl_keypoints[4] = coco_keypoints[13]  # left_knee
+        smpl_keypoints[5] = coco_keypoints[14]  # right_knee
+        smpl_keypoints[7] = coco_keypoints[15]  # left_ankle
+        smpl_keypoints[8] = coco_keypoints[16]  # right_ankle
 
         # Interpolated/estimated joints
         # Pelvis: midpoint of hips
         smpl_keypoints[0] = (coco_keypoints[11] + coco_keypoints[12]) / 2
 
         # Spine joints (estimate based on body proportions)
-        hip_to_shoulder = (
-            (coco_keypoints[5] + coco_keypoints[6]) / 2 - smpl_keypoints[0]
-        )
+        hip_to_shoulder = (coco_keypoints[5] + coco_keypoints[6]) / 2 - smpl_keypoints[0]
         smpl_keypoints[3] = smpl_keypoints[0] + hip_to_shoulder * 0.3  # spine1
         smpl_keypoints[6] = smpl_keypoints[0] + hip_to_shoulder * 0.6  # spine2
         smpl_keypoints[9] = smpl_keypoints[0] + hip_to_shoulder * 0.9  # spine3
@@ -111,12 +115,16 @@ class KeypointConverter:
 
         # Collars (estimate from shoulders)
         shoulder_center = smpl_keypoints[12]
-        smpl_keypoints[13] = shoulder_center + (coco_keypoints[5] - shoulder_center) * 0.3  # l_collar
-        smpl_keypoints[14] = shoulder_center + (coco_keypoints[6] - shoulder_center) * 0.3  # r_collar
+        smpl_keypoints[13] = (
+            shoulder_center + (coco_keypoints[5] - shoulder_center) * 0.3
+        )  # l_collar
+        smpl_keypoints[14] = (
+            shoulder_center + (coco_keypoints[6] - shoulder_center) * 0.3
+        )  # r_collar
 
         # Hands (extend from wrists)
         wrist_to_hand_offset = np.array([0, -0.08, 0])  # ~8cm down
-        smpl_keypoints[22] = coco_keypoints[9] + wrist_to_hand_offset   # l_hand
+        smpl_keypoints[22] = coco_keypoints[9] + wrist_to_hand_offset  # l_hand
         smpl_keypoints[23] = coco_keypoints[10] + wrist_to_hand_offset  # r_hand
 
         # Feet (extend from ankles)
@@ -160,19 +168,19 @@ class KeypointConverter:
         coco_keypoints = np.zeros((17, 3))
 
         # Direct reverse mappings
-        coco_keypoints[0] = smpl_keypoints[15]   # nose (from head)
-        coco_keypoints[5] = smpl_keypoints[16]   # left_shoulder
-        coco_keypoints[6] = smpl_keypoints[17]   # right_shoulder
-        coco_keypoints[7] = smpl_keypoints[18]   # left_elbow
-        coco_keypoints[8] = smpl_keypoints[19]   # right_elbow
-        coco_keypoints[9] = smpl_keypoints[20]   # left_wrist
+        coco_keypoints[0] = smpl_keypoints[15]  # nose (from head)
+        coco_keypoints[5] = smpl_keypoints[16]  # left_shoulder
+        coco_keypoints[6] = smpl_keypoints[17]  # right_shoulder
+        coco_keypoints[7] = smpl_keypoints[18]  # left_elbow
+        coco_keypoints[8] = smpl_keypoints[19]  # right_elbow
+        coco_keypoints[9] = smpl_keypoints[20]  # left_wrist
         coco_keypoints[10] = smpl_keypoints[21]  # right_wrist
-        coco_keypoints[11] = smpl_keypoints[1]   # left_hip
-        coco_keypoints[12] = smpl_keypoints[2]   # right_hip
-        coco_keypoints[13] = smpl_keypoints[4]   # left_knee
-        coco_keypoints[14] = smpl_keypoints[5]   # right_knee
-        coco_keypoints[15] = smpl_keypoints[7]   # left_ankle
-        coco_keypoints[16] = smpl_keypoints[8]   # right_ankle
+        coco_keypoints[11] = smpl_keypoints[1]  # left_hip
+        coco_keypoints[12] = smpl_keypoints[2]  # right_hip
+        coco_keypoints[13] = smpl_keypoints[4]  # left_knee
+        coco_keypoints[14] = smpl_keypoints[5]  # right_knee
+        coco_keypoints[15] = smpl_keypoints[7]  # left_ankle
+        coco_keypoints[16] = smpl_keypoints[8]  # right_ankle
 
         # Estimate eyes and ears from head position
         # (SMPL doesn't have these, so we approximate)
@@ -203,7 +211,7 @@ class KeypointConverter:
         return coco_keypoints
 
     @staticmethod
-    def smpl24_to_opensim_markers(smpl_keypoints: np.ndarray) -> Dict[str, np.ndarray]:
+    def smpl24_to_opensim_markers(smpl_keypoints: np.ndarray) -> dict[str, np.ndarray]:
         """Convert SMPL-24 keypoints to OpenSim marker positions.
 
         Args:
@@ -215,31 +223,31 @@ class KeypointConverter:
         markers = {}
 
         # Direct mappings
-        markers['pelvis'] = smpl_keypoints[0, :3]
-        markers['l_hip'] = smpl_keypoints[1, :3]
-        markers['r_hip'] = smpl_keypoints[2, :3]
-        markers['l_knee'] = smpl_keypoints[4, :3]
-        markers['r_knee'] = smpl_keypoints[5, :3]
-        markers['l_ankle'] = smpl_keypoints[7, :3]
-        markers['r_ankle'] = smpl_keypoints[8, :3]
-        markers['l_foot'] = smpl_keypoints[10, :3]
-        markers['r_foot'] = smpl_keypoints[11, :3]
-        markers['neck'] = smpl_keypoints[12, :3]
-        markers['head'] = smpl_keypoints[15, :3]
-        markers['l_shoulder'] = smpl_keypoints[16, :3]
-        markers['r_shoulder'] = smpl_keypoints[17, :3]
-        markers['l_elbow'] = smpl_keypoints[18, :3]
-        markers['r_elbow'] = smpl_keypoints[19, :3]
-        markers['l_wrist'] = smpl_keypoints[20, :3]
-        markers['r_wrist'] = smpl_keypoints[21, :3]
-        markers['l_hand'] = smpl_keypoints[22, :3]
-        markers['r_hand'] = smpl_keypoints[23, :3]
+        markers["pelvis"] = smpl_keypoints[0, :3]
+        markers["l_hip"] = smpl_keypoints[1, :3]
+        markers["r_hip"] = smpl_keypoints[2, :3]
+        markers["l_knee"] = smpl_keypoints[4, :3]
+        markers["r_knee"] = smpl_keypoints[5, :3]
+        markers["l_ankle"] = smpl_keypoints[7, :3]
+        markers["r_ankle"] = smpl_keypoints[8, :3]
+        markers["l_foot"] = smpl_keypoints[10, :3]
+        markers["r_foot"] = smpl_keypoints[11, :3]
+        markers["neck"] = smpl_keypoints[12, :3]
+        markers["head"] = smpl_keypoints[15, :3]
+        markers["l_shoulder"] = smpl_keypoints[16, :3]
+        markers["r_shoulder"] = smpl_keypoints[17, :3]
+        markers["l_elbow"] = smpl_keypoints[18, :3]
+        markers["r_elbow"] = smpl_keypoints[19, :3]
+        markers["l_wrist"] = smpl_keypoints[20, :3]
+        markers["r_wrist"] = smpl_keypoints[21, :3]
+        markers["l_hand"] = smpl_keypoints[22, :3]
+        markers["r_hand"] = smpl_keypoints[23, :3]
 
         # Additional OpenSim markers (estimated)
         # Spine markers
-        markers['spine'] = smpl_keypoints[3, :3]  # spine1
-        markers['thorax'] = smpl_keypoints[6, :3]  # spine2
-        markers['chest'] = smpl_keypoints[9, :3]  # spine3
+        markers["spine"] = smpl_keypoints[3, :3]  # spine1
+        markers["thorax"] = smpl_keypoints[6, :3]  # spine2
+        markers["chest"] = smpl_keypoints[9, :3]  # spine3
 
         # ASIS/PSIS (anterior/posterior superior iliac spine)
         pelvis = smpl_keypoints[0, :3]
@@ -250,24 +258,24 @@ class KeypointConverter:
         hip_center = (l_hip + r_hip) / 2
 
         # Estimate ASIS (front of pelvis)
-        markers['l_asis'] = l_hip + np.array([0, 0, 0.05])
-        markers['r_asis'] = r_hip + np.array([0, 0, 0.05])
+        markers["l_asis"] = l_hip + np.array([0, 0, 0.05])
+        markers["r_asis"] = r_hip + np.array([0, 0, 0.05])
 
         # Estimate PSIS (back of pelvis)
-        markers['l_psis'] = l_hip + np.array([0, 0, -0.05])
-        markers['r_psis'] = r_hip + np.array([0, 0, -0.05])
+        markers["l_psis"] = l_hip + np.array([0, 0, -0.05])
+        markers["r_psis"] = r_hip + np.array([0, 0, -0.05])
 
         # Acromion (top of shoulder)
-        markers['l_acromion'] = smpl_keypoints[16, :3] + np.array([0, 0.02, 0])
-        markers['r_acromion'] = smpl_keypoints[17, :3] + np.array([0, 0.02, 0])
+        markers["l_acromion"] = smpl_keypoints[16, :3] + np.array([0, 0.02, 0])
+        markers["r_acromion"] = smpl_keypoints[17, :3] + np.array([0, 0.02, 0])
 
         # Heel markers
-        markers['l_heel'] = smpl_keypoints[10, :3] + np.array([0, -0.03, -0.05])
-        markers['r_heel'] = smpl_keypoints[11, :3] + np.array([0, -0.03, -0.05])
+        markers["l_heel"] = smpl_keypoints[10, :3] + np.array([0, -0.03, -0.05])
+        markers["r_heel"] = smpl_keypoints[11, :3] + np.array([0, -0.03, -0.05])
 
         # Toe markers
-        markers['l_toe'] = smpl_keypoints[10, :3] + np.array([0, -0.03, 0.1])
-        markers['r_toe'] = smpl_keypoints[11, :3] + np.array([0, -0.03, 0.1])
+        markers["l_toe"] = smpl_keypoints[10, :3] + np.array([0, -0.03, 0.1])
+        markers["r_toe"] = smpl_keypoints[11, :3] + np.array([0, -0.03, 0.1])
 
         return markers
 
@@ -285,16 +293,16 @@ class KeypointConverter:
 
         # MediaPipe landmark indices (from mediapipe_estimator.py mapping)
         MP_TO_COCO17 = {
-            0: 0,    # nose
-            2: 1,    # left_eye (left_eye_inner)
-            5: 2,    # right_eye (right_eye_inner)
-            7: 3,    # left_ear
-            8: 4,    # right_ear
-            11: 5,   # left_shoulder
-            12: 6,   # right_shoulder
-            13: 7,   # left_elbow
-            14: 8,   # right_elbow
-            15: 9,   # left_wrist
+            0: 0,  # nose
+            2: 1,  # left_eye (left_eye_inner)
+            5: 2,  # right_eye (right_eye_inner)
+            7: 3,  # left_ear
+            8: 4,  # right_ear
+            11: 5,  # left_shoulder
+            12: 6,  # right_shoulder
+            13: 7,  # left_elbow
+            14: 8,  # right_elbow
+            15: 9,  # left_wrist
             16: 10,  # right_wrist
             23: 11,  # left_hip
             24: 12,  # right_hip
@@ -313,8 +321,7 @@ class KeypointConverter:
 
     @staticmethod
     def normalize_keypoints_to_bbox(
-        keypoints: np.ndarray,
-        bbox: Tuple[float, float, float, float]
+        keypoints: np.ndarray, bbox: tuple[float, float, float, float]
     ) -> np.ndarray:
         """Normalize keypoints to bounding box coordinates [0, 1].
 
@@ -337,8 +344,7 @@ class KeypointConverter:
 
     @staticmethod
     def denormalize_keypoints_from_bbox(
-        normalized_keypoints: np.ndarray,
-        bbox: Tuple[float, float, float, float]
+        normalized_keypoints: np.ndarray, bbox: tuple[float, float, float, float]
     ) -> np.ndarray:
         """Denormalize keypoints from bounding box coordinates.
 
@@ -361,9 +367,7 @@ class KeypointConverter:
 
     @staticmethod
     def convert_format(
-        keypoints: np.ndarray,
-        source_format: KeypointFormat,
-        target_format: KeypointFormat
+        keypoints: np.ndarray, source_format: KeypointFormat, target_format: KeypointFormat
     ) -> np.ndarray:
         """Convert keypoints between formats (routing function).
 
@@ -426,8 +430,8 @@ def test_conversions():
 
     # Test SMPL-24 → OpenSim markers
     markers = KeypointConverter.smpl24_to_opensim_markers(smpl24)
-    assert 'pelvis' in markers, "Missing pelvis marker"
-    assert 'l_shoulder' in markers, "Missing left shoulder marker"
+    assert "pelvis" in markers, "Missing pelvis marker"
+    assert "l_shoulder" in markers, "Missing left shoulder marker"
     print(f"✅ SMPL-24 → OpenSim markers ({len(markers)} markers)")
 
     # Test MediaPipe-33 → COCO-17

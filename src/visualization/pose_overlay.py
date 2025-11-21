@@ -1,7 +1,5 @@
 """Pose overlay visualization for swimming analysis."""
 
-from typing import Dict, List, Optional, Tuple
-
 import cv2
 import numpy as np
 
@@ -58,9 +56,9 @@ class PoseOverlay:
 
     def __init__(
         self,
-        keypoint_color: Tuple[int, int, int] = (0, 255, 0),
-        skeleton_color_left: Tuple[int, int, int] = (255, 0, 0),
-        skeleton_color_right: Tuple[int, int, int] = (0, 0, 255),
+        keypoint_color: tuple[int, int, int] = (0, 255, 0),
+        skeleton_color_left: tuple[int, int, int] = (255, 0, 0),
+        skeleton_color_right: tuple[int, int, int] = (0, 0, 255),
         keypoint_radius: int = 5,
         skeleton_thickness: int = 2,
         min_confidence: float = 0.3,
@@ -83,7 +81,7 @@ class PoseOverlay:
         self.min_confidence = min_confidence
 
     def draw_skeleton(
-        self, frame: np.ndarray, pose_data: Dict, show_confidence: bool = False
+        self, frame: np.ndarray, pose_data: dict, show_confidence: bool = False
     ) -> np.ndarray:
         """Draw pose skeleton on frame.
 
@@ -153,7 +151,7 @@ class PoseOverlay:
         return frame_copy
 
     def draw_angles(
-        self, frame: np.ndarray, pose_data: Dict, angles: Dict[str, Optional[float]]
+        self, frame: np.ndarray, pose_data: dict, angles: dict[str, float | None]
     ) -> np.ndarray:
         """Draw angle measurements on frame.
 
@@ -188,9 +186,7 @@ class PoseOverlay:
                 text = f"{angle:.1f}°"
 
                 # Draw background rectangle
-                (text_w, text_h), _ = cv2.getTextSize(
-                    text, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1
-                )
+                (text_w, text_h), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
                 cv2.rectangle(
                     frame_copy,
                     (pt[0] - 2, pt[1] - text_h - 2),
@@ -215,8 +211,8 @@ class PoseOverlay:
     def draw_trajectory(
         self,
         frame: np.ndarray,
-        trajectory: List[Tuple[float, float]],
-        color: Tuple[int, int, int] = (255, 255, 0),
+        trajectory: list[tuple[float, float]],
+        color: tuple[int, int, int] = (255, 255, 0),
         thickness: int = 2,
     ) -> np.ndarray:
         """Draw hand/body trajectory path on frame.
@@ -242,9 +238,7 @@ class PoseOverlay:
 
         return frame_copy
 
-    def draw_bbox(
-        self, frame: np.ndarray, bbox: Dict, label: str = "Swimmer"
-    ) -> np.ndarray:
+    def draw_bbox(self, frame: np.ndarray, bbox: dict, label: str = "Swimmer") -> np.ndarray:
         """Draw bounding box around detected person.
 
         Args:
@@ -290,9 +284,7 @@ class PoseOverlay:
 
         return frame_copy
 
-    def draw_fps(
-        self, frame: np.ndarray, fps: float, position: str = "top_left"
-    ) -> np.ndarray:
+    def draw_fps(self, frame: np.ndarray, fps: float, position: str = "top_left") -> np.ndarray:
         """Draw FPS counter on frame.
 
         Args:

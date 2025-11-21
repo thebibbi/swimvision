@@ -7,25 +7,29 @@ Automatically adjusts detection thresholds and parameters based on:
 - Environmental factors
 """
 
-from typing import Dict, List, Optional, Tuple
+from collections import deque
+from collections.abc import Deque
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Any
+
 import numpy as np
-from collections import deque
 
 
 class PoolCondition(Enum):
     """Pool environment conditions."""
-    EXCELLENT = "excellent"        # Perfect lighting, clear water
-    GOOD = "good"                 # Good conditions
-    FAIR = "fair"                 # Acceptable conditions
-    POOR = "poor"                 # Challenging conditions
-    VERY_POOR = "very_poor"       # Very difficult conditions
+
+    EXCELLENT = "excellent"  # Perfect lighting, clear water
+    GOOD = "good"  # Good conditions
+    FAIR = "fair"  # Acceptable conditions
+    POOR = "poor"  # Challenging conditions
+    VERY_POOR = "very_poor"  # Very difficult conditions
 
 
 @dataclass
 class AdaptiveParameters:
     """Adaptive parameters for detection."""
+
     confidence_threshold: float = 0.5
     occlusion_threshold: float = 0.3
     tracking_confidence: float = 0.4
@@ -43,15 +47,16 @@ class AdaptiveParameters:
     # Temporal smoothing
     smoothing_window: int = 5
 
-    metadata: Dict = field(default_factory=dict)
+    metadata: dict = field(default_factory=dict)
 
 
 @dataclass
 class PerformanceMetrics:
     """Detection performance metrics for adaptive tuning."""
+
     avg_confidence: float = 0.0
-    detection_rate: float = 0.0        # % of frames with detections
-    tracking_stability: float = 0.0    # Stability score
+    detection_rate: float = 0.0  # % of frames with detections
+    tracking_stability: float = 0.0  # Stability score
     false_positive_rate: float = 0.0
     avg_keypoint_visibility: float = 0.0
     temporal_consistency: float = 0.0
@@ -62,7 +67,7 @@ class AdaptiveThresholdTuner:
 
     def __init__(
         self,
-        initial_params: Optional[AdaptiveParameters] = None,
+        initial_params: AdaptiveParameters | None = None,
         adaptation_rate: float = 0.1,
         history_size: int = 30,
         auto_tune: bool = True,
@@ -81,21 +86,21 @@ class AdaptiveThresholdTuner:
         self.auto_tune = auto_tune
 
         # Metrics history
-        self.confidence_history = deque(maxlen=history_size)
-        self.detection_history = deque(maxlen=history_size)
-        self.stability_history = deque(maxlen=history_size)
-        self.visibility_history = deque(maxlen=history_size)
+        self.confidence_history: Deque[float] = deque(maxlen=history_size)
+        self.detection_history: Deque[bool] = deque(maxlen=history_size)
+        self.stability_history: Deque[float] = deque(maxlen=history_size)
+        self.visibility_history: Deque[float] = deque(maxlen=history_size)
 
         # Previous detection for tracking
-        self.previous_detections = []
+        self.previous_detections: list[Any] = []
 
         # Condition assessment
         self.current_condition = PoolCondition.GOOD
 
     def update(
         self,
-        detection_result: Optional[Dict],
-        frame_stats: Optional[Dict] = None,
+        detection_result: dict | None,
+        frame_stats: dict | None = None,
     ) -> AdaptiveParameters:
         """Update parameters based on detection results.
 
@@ -129,8 +134,8 @@ class AdaptiveThresholdTuner:
 
     def _calculate_metrics(
         self,
-        detection_result: Optional[Dict],
-        frame_stats: Optional[Dict],
+        detection_result: dict | None,
+        frame_stats: dict | None,
     ) -> PerformanceMetrics:
         """Calculate performance metrics.
 
@@ -151,7 +156,7 @@ class AdaptiveThresholdTuner:
                 else:
                     return metrics
 
-            keypoints = detection_result.get('keypoints', np.array([]))
+            keypoints = detection_result.get("keypoints", np.array([]))
 
             if len(keypoints) > 0:
                 # Average confidence
@@ -165,7 +170,7 @@ class AdaptiveThresholdTuner:
                 # Tracking stability (compare with previous frame)
                 if len(self.previous_detections) > 0:
                     prev_det = self.previous_detections[-1]
-                    prev_kps = prev_det.get('keypoints', np.array([]))
+                    prev_kps = prev_det.get("keypoints", np.array([]))
 
                     if len(prev_kps) == len(keypoints):
                         # Calculate position differences
@@ -196,7 +201,7 @@ class AdaptiveThresholdTuner:
     def _assess_conditions(
         self,
         metrics: PerformanceMetrics,
-        frame_stats: Optional[Dict],
+        frame_stats: dict | None,
     ):
         """Assess current pool conditions.
 
@@ -227,8 +232,8 @@ class AdaptiveThresholdTuner:
             factors += 1
 
         # Factor 4: Frame brightness (if available)
-        if frame_stats and 'brightness' in frame_stats:
-            brightness = frame_stats['brightness']
+        if frame_stats and "brightness" in frame_stats:
+            brightness = frame_stats["brightness"]
             # Normalize brightness (assuming 0-255 range)
             # Optimal brightness around 100-150
             if 80 <= brightness <= 170:
@@ -334,37 +339,37 @@ class AdaptiveThresholdTuner:
         if self.current_condition == PoolCondition.EXCELLENT:
             # Can use stricter thresholds
             targets = {
-                'confidence_threshold': 0.6,
-                'occlusion_threshold': 0.35,
-                'min_detection_confidence': 0.4,
+                "confidence_threshold": 0.6,
+                "occlusion_threshold": 0.35,
+                "min_detection_confidence": 0.4,
             }
         elif self.current_condition == PoolCondition.GOOD:
             # Standard thresholds
             targets = {
-                'confidence_threshold': 0.5,
-                'occlusion_threshold': 0.3,
-                'min_detection_confidence': 0.3,
+                "confidence_threshold": 0.5,
+                "occlusion_threshold": 0.3,
+                "min_detection_confidence": 0.3,
             }
         elif self.current_condition == PoolCondition.FAIR:
             # Slightly more lenient
             targets = {
-                'confidence_threshold': 0.4,
-                'occlusion_threshold': 0.25,
-                'min_detection_confidence': 0.25,
+                "confidence_threshold": 0.4,
+                "occlusion_threshold": 0.25,
+                "min_detection_confidence": 0.25,
             }
         elif self.current_condition == PoolCondition.POOR:
             # More lenient thresholds
             targets = {
-                'confidence_threshold': 0.35,
-                'occlusion_threshold': 0.2,
-                'min_detection_confidence': 0.2,
+                "confidence_threshold": 0.35,
+                "occlusion_threshold": 0.2,
+                "min_detection_confidence": 0.2,
             }
         else:  # VERY_POOR
             # Very lenient
             targets = {
-                'confidence_threshold': 0.25,
-                'occlusion_threshold': 0.15,
-                'min_detection_confidence': 0.15,
+                "confidence_threshold": 0.25,
+                "occlusion_threshold": 0.15,
+                "min_detection_confidence": 0.15,
             }
 
         # Gradually adapt to target values
@@ -395,18 +400,26 @@ class AdaptiveThresholdTuner:
         self.current_condition = condition
         self._tune_for_condition()
 
-    def get_current_metrics(self) -> Dict:
+    def get_current_metrics(self) -> dict:
         """Get current performance metrics.
 
         Returns:
             Dictionary with current metrics.
         """
         return {
-            'avg_confidence': float(np.mean(self.confidence_history)) if len(self.confidence_history) > 0 else 0.0,
-            'detection_rate': float(np.mean(self.detection_history)) if len(self.detection_history) > 0 else 0.0,
-            'avg_stability': float(np.mean(self.stability_history)) if len(self.stability_history) > 0 else 0.0,
-            'avg_visibility': float(np.mean(self.visibility_history)) if len(self.visibility_history) > 0 else 0.0,
-            'current_condition': self.current_condition.value,
+            "avg_confidence": float(np.mean(self.confidence_history))
+            if len(self.confidence_history) > 0
+            else 0.0,
+            "detection_rate": float(np.mean(self.detection_history))
+            if len(self.detection_history) > 0
+            else 0.0,
+            "avg_stability": float(np.mean(self.stability_history))
+            if len(self.stability_history) > 0
+            else 0.0,
+            "avg_visibility": float(np.mean(self.visibility_history))
+            if len(self.visibility_history) > 0
+            else 0.0,
+            "current_condition": self.current_condition.value,
         }
 
     def get_parameters(self) -> AdaptiveParameters:
@@ -427,7 +440,7 @@ class AdaptiveThresholdTuner:
         self.current_condition = PoolCondition.GOOD
 
 
-def calculate_frame_stats(frame: np.ndarray) -> Dict:
+def calculate_frame_stats(frame: np.ndarray) -> dict:
     """Calculate frame statistics for adaptive tuning.
 
     Args:
@@ -457,9 +470,9 @@ def calculate_frame_stats(frame: np.ndarray) -> Dict:
     avg_saturation = float(np.mean(s))
 
     return {
-        'brightness': brightness,
-        'contrast': contrast,
-        'sharpness': sharpness,
-        'avg_hue': avg_hue,
-        'avg_saturation': avg_saturation,
+        "brightness": brightness,
+        "contrast": contrast,
+        "sharpness": sharpness,
+        "avg_hue": avg_hue,
+        "avg_saturation": avg_saturation,
     }

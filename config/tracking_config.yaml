@@ -19,14 +19,14 @@ occlusion_detection:
 
   # Underwater phases (hands typically occluded)
   underwater_phases:
-    - catch
-    - pull
-    - push
+  - catch
+  - pull
+  - push
 
   # Visible phases (hands above water)
   visible_phases:
-    - entry
-    - recovery
+  - entry
+  - recovery
 
 # Kalman filter settings
 kalman:
@@ -41,15 +41,15 @@ kalman:
 phase_aware:
   enabled: true
   use_templates: false           # Use pre-recorded ideal trajectories
-  template_path: "models/phase_templates/"
+  template_path: models/phase_templates/
 
   # Expected velocity bounds for each phase (in pixels/frame)
   velocity_bounds:
-    entry: { x: [-5, 5], y: [0, 15] }
-    catch: { x: [-10, 5], y: [0, 10] }
-    pull: { x: [-15, 0], y: [-5, 10] }
-    push: { x: [-15, 0], y: [-10, 5] }
-    recovery: { x: [0, 20], y: [-15, 0] }
+    entry: {x: [-5, 5], y: [0, 15]}
+    catch: {x: [-10, 5], y: [0, 10]}
+    pull: {x: [-15, 0], y: [-5, 10]}
+    push: {x: [-15, 0], y: [-10, 5]}
+    recovery: {x: [0, 20], y: [-15, 0]}
 
 # Interpolation settings
 interpolation:

@@ -8,42 +8,46 @@ Compare performance of different pose estimation models on:
 - Robustness to occlusions
 """
 
-from typing import Dict, List, Optional, Tuple
+import json
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
-import time
-import numpy as np
-import cv2
-import json
 
-from src.pose.base_estimator import BasePoseEstimator, KeypointFormat
+import cv2
+import numpy as np
+
+from src.pose.base_estimator import BasePoseEstimator
 
 
 @dataclass
 class ModelMetrics:
     """Performance metrics for a single model."""
+
     model_name: str
-    avg_inference_time: float = 0.0        # Average time per frame (seconds)
-    fps: float = 0.0                       # Frames per second
-    avg_confidence: float = 0.0            # Average keypoint confidence
-    detection_rate: float = 0.0            # % of frames with detections
-    avg_keypoints_detected: float = 0.0    # Average number of keypoints per frame
-    keypoint_visibility: Dict[str, float] = field(default_factory=dict)  # Per-keypoint visibility rate
-    memory_usage_mb: float = 0.0           # Approximate memory usage
+    avg_inference_time: float = 0.0  # Average time per frame (seconds)
+    fps: float = 0.0  # Frames per second
+    avg_confidence: float = 0.0  # Average keypoint confidence
+    detection_rate: float = 0.0  # % of frames with detections
+    avg_keypoints_detected: float = 0.0  # Average number of keypoints per frame
+    keypoint_visibility: dict[str, float] = field(
+        default_factory=dict
+    )  # Per-keypoint visibility rate
+    memory_usage_mb: float = 0.0  # Approximate memory usage
     total_frames_processed: int = 0
     failed_frames: int = 0
-    metadata: Dict = field(default_factory=dict)
+    metadata: dict = field(default_factory=dict)
 
 
 @dataclass
 class ComparisonResult:
     """Results of model comparison."""
-    models_compared: List[str]
-    metrics: Dict[str, ModelMetrics]       # Model name -> metrics
-    winner_by_metric: Dict[str, str]       # Metric name -> best model
-    frame_by_frame_comparison: List[Dict]  # Per-frame comparison data
-    summary: str                            # Summary text
-    timestamp: str                          # When comparison was run
+
+    models_compared: list[str]
+    metrics: dict[str, ModelMetrics]  # Model name -> metrics
+    winner_by_metric: dict[str, str]  # Metric name -> best model
+    frame_by_frame_comparison: list[dict]  # Per-frame comparison data
+    summary: str  # Summary text
+    timestamp: str  # When comparison was run
 
 
 class ModelComparison:
@@ -51,7 +55,7 @@ class ModelComparison:
 
     def __init__(
         self,
-        models: Dict[str, BasePoseEstimator],
+        models: dict[str, BasePoseEstimator],
         output_dir: str = "results/model_comparison",
     ):
         """Initialize model comparison.
@@ -65,7 +69,7 @@ class ModelComparison:
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
         # Metrics storage
-        self.metrics = {name: ModelMetrics(model_name=name) for name in models.keys()}
+        self.metrics = {name: ModelMetrics(model_name=name) for name in models}
 
         # Frame-by-frame comparison data
         self.frame_comparisons = []
@@ -73,7 +77,7 @@ class ModelComparison:
     def benchmark_on_video(
         self,
         video_path: str,
-        max_frames: Optional[int] = None,
+        max_frames: int | None = None,
         visualize: bool = False,
     ) -> ComparisonResult:
         """Benchmark all models on a video.
@@ -129,6 +133,7 @@ class ModelComparison:
 
         # Create result
         from datetime import datetime
+
         result = ComparisonResult(
             models_compared=list(self.models.keys()),
             metrics=self.metrics,
@@ -147,7 +152,7 @@ class ModelComparison:
         self,
         frame: np.ndarray,
         frame_idx: int,
-    ) -> Dict:
+    ) -> dict:
         """Process single frame with all models.
 
         Args:
@@ -158,8 +163,8 @@ class ModelComparison:
             Dictionary with results from all models.
         """
         results = {
-            'frame_idx': frame_idx,
-            'models': {},
+            "frame_idx": frame_idx,
+            "models": {},
         }
 
         for model_name, model in self.models.items():
@@ -176,16 +181,18 @@ class ModelComparison:
                         pose_data = pose_data[0] if len(pose_data) > 0 else None
 
                     if pose_data is not None:
-                        keypoints = pose_data.get('keypoints', np.array([]))
+                        keypoints = pose_data.get("keypoints", np.array([]))
                         confidences = keypoints[:, 2] if len(keypoints) > 0 else np.array([])
 
-                        results['models'][model_name] = {
-                            'detected': True,
-                            'inference_time': inference_time,
-                            'num_keypoints': len(keypoints),
-                            'avg_confidence': float(np.mean(confidences)) if len(confidences) > 0 else 0.0,
-                            'keypoints': keypoints.tolist(),
-                            'keypoint_names': pose_data.get('keypoint_names', []),
+                        results["models"][model_name] = {
+                            "detected": True,
+                            "inference_time": inference_time,
+                            "num_keypoints": len(keypoints),
+                            "avg_confidence": float(np.mean(confidences))
+                            if len(confidences) > 0
+                            else 0.0,
+                            "keypoints": keypoints.tolist(),
+                            "keypoint_names": pose_data.get("keypoint_names", []),
                         }
 
                         # Update running metrics
@@ -194,27 +201,36 @@ class ModelComparison:
 
                         # Update averages (running average)
                         n = metrics.total_frames_processed
-                        metrics.avg_inference_time = (metrics.avg_inference_time * (n-1) + inference_time) / n
-                        metrics.avg_confidence = (metrics.avg_confidence * (n-1) + results['models'][model_name]['avg_confidence']) / n
-                        metrics.avg_keypoints_detected = (metrics.avg_keypoints_detected * (n-1) + len(keypoints)) / n
+                        metrics.avg_inference_time = (
+                            metrics.avg_inference_time * (n - 1) + inference_time
+                        ) / n
+                        metrics.avg_confidence = (
+                            metrics.avg_confidence * (n - 1)
+                            + results["models"][model_name]["avg_confidence"]
+                        ) / n
+                        metrics.avg_keypoints_detected = (
+                            metrics.avg_keypoints_detected * (n - 1) + len(keypoints)
+                        ) / n
 
                         # Update per-keypoint visibility
-                        for kp_name, kp in zip(pose_data.get('keypoint_names', []), keypoints):
+                        for kp_name, kp in zip(
+                            pose_data.get("keypoint_names", []), keypoints, strict=False
+                        ):
                             if kp_name not in metrics.keypoint_visibility:
                                 metrics.keypoint_visibility[kp_name] = 0.0
 
                             # Running average of visibility (conf > 0.3)
                             visible = 1.0 if kp[2] > 0.3 else 0.0
                             metrics.keypoint_visibility[kp_name] = (
-                                metrics.keypoint_visibility[kp_name] * (n-1) + visible
+                                metrics.keypoint_visibility[kp_name] * (n - 1) + visible
                             ) / n
 
                         continue
 
                 # No detection
-                results['models'][model_name] = {
-                    'detected': False,
-                    'inference_time': inference_time,
+                results["models"][model_name] = {
+                    "detected": False,
+                    "inference_time": inference_time,
                 }
 
                 metrics = self.metrics[model_name]
@@ -222,9 +238,9 @@ class ModelComparison:
 
             except Exception as e:
                 print(f"Error processing frame {frame_idx} with {model_name}: {e}")
-                results['models'][model_name] = {
-                    'detected': False,
-                    'error': str(e),
+                results["models"][model_name] = {
+                    "detected": False,
+                    "error": str(e),
                 }
                 self.metrics[model_name].failed_frames += 1
 
@@ -242,7 +258,7 @@ class ModelComparison:
             if total_attempts > 0:
                 metrics.detection_rate = metrics.total_frames_processed / total_attempts
 
-    def _determine_winners(self) -> Dict[str, str]:
+    def _determine_winners(self) -> dict[str, str]:
         """Determine best model for each metric.
 
         Returns:
@@ -252,19 +268,19 @@ class ModelComparison:
 
         # Best FPS (higher is better)
         best_fps_model = max(self.metrics.items(), key=lambda x: x[1].fps)
-        winners['fps'] = best_fps_model[0]
+        winners["fps"] = best_fps_model[0]
 
         # Best average confidence (higher is better)
         best_conf_model = max(self.metrics.items(), key=lambda x: x[1].avg_confidence)
-        winners['confidence'] = best_conf_model[0]
+        winners["confidence"] = best_conf_model[0]
 
         # Best detection rate (higher is better)
         best_det_model = max(self.metrics.items(), key=lambda x: x[1].detection_rate)
-        winners['detection_rate'] = best_det_model[0]
+        winners["detection_rate"] = best_det_model[0]
 
         # Best average keypoints detected (higher is better)
         best_kp_model = max(self.metrics.items(), key=lambda x: x[1].avg_keypoints_detected)
-        winners['keypoints_detected'] = best_kp_model[0]
+        winners["keypoints_detected"] = best_kp_model[0]
 
         return winners
 
@@ -299,7 +315,7 @@ class ModelComparison:
     def _visualize_comparison(
         self,
         frame: np.ndarray,
-        frame_results: Dict,
+        frame_results: dict,
         frame_idx: int,
     ):
         """Create visualization comparing all models on this frame.
@@ -316,30 +332,48 @@ class ModelComparison:
         h, w = frame.shape[:2]
         grid = np.zeros((h * grid_size, w * grid_size, 3), dtype=np.uint8)
 
-        for idx, (model_name, result) in enumerate(frame_results['models'].items()):
+        for idx, (model_name, result) in enumerate(frame_results["models"].items()):
             row = idx // grid_size
             col = idx % grid_size
 
             model_frame = frame.copy()
 
             # Draw keypoints if detected
-            if result.get('detected', False):
-                keypoints = np.array(result['keypoints'])
+            if result.get("detected", False):
+                keypoints = np.array(result["keypoints"])
                 for kp in keypoints:
                     if kp[2] > 0.3:  # Confidence threshold
                         x, y = int(kp[0]), int(kp[1])
                         cv2.circle(model_frame, (x, y), 5, (0, 255, 0), -1)
 
             # Add model name and metrics
-            cv2.putText(model_frame, model_name, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+            cv2.putText(
+                model_frame, model_name, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2
+            )
 
-            if 'inference_time' in result:
+            if "inference_time" in result:
                 fps_text = f"FPS: {1.0/result['inference_time']:.1f}"
-                cv2.putText(model_frame, fps_text, (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+                cv2.putText(
+                    model_frame,
+                    fps_text,
+                    (10, 60),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.7,
+                    (255, 255, 255),
+                    2,
+                )
 
-            if 'avg_confidence' in result:
+            if "avg_confidence" in result:
                 conf_text = f"Conf: {result['avg_confidence']:.2f}"
-                cv2.putText(model_frame, conf_text, (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+                cv2.putText(
+                    model_frame,
+                    conf_text,
+                    (10, 90),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.7,
+                    (255, 255, 255),
+                    2,
+                )
 
             # Place in grid
             y1 = row * h
@@ -361,7 +395,7 @@ class ModelComparison:
         """
         # Save summary text
         summary_path = self.output_dir / "summary.txt"
-        with open(summary_path, 'w') as f:
+        with open(summary_path, "w") as f:
             f.write(result.summary)
 
         # Save detailed metrics as JSON
@@ -369,23 +403,27 @@ class ModelComparison:
         metrics_dict = {}
         for model_name, metrics in result.metrics.items():
             metrics_dict[model_name] = {
-                'avg_inference_time': metrics.avg_inference_time,
-                'fps': metrics.fps,
-                'avg_confidence': metrics.avg_confidence,
-                'detection_rate': metrics.detection_rate,
-                'avg_keypoints_detected': metrics.avg_keypoints_detected,
-                'keypoint_visibility': metrics.keypoint_visibility,
-                'total_frames_processed': metrics.total_frames_processed,
-                'failed_frames': metrics.failed_frames,
+                "avg_inference_time": metrics.avg_inference_time,
+                "fps": metrics.fps,
+                "avg_confidence": metrics.avg_confidence,
+                "detection_rate": metrics.detection_rate,
+                "avg_keypoints_detected": metrics.avg_keypoints_detected,
+                "keypoint_visibility": metrics.keypoint_visibility,
+                "total_frames_processed": metrics.total_frames_processed,
+                "failed_frames": metrics.failed_frames,
             }
 
-        with open(metrics_path, 'w') as f:
-            json.dump({
-                'models_compared': result.models_compared,
-                'metrics': metrics_dict,
-                'winner_by_metric': result.winner_by_metric,
-                'timestamp': result.timestamp,
-            }, f, indent=2)
+        with open(metrics_path, "w") as f:
+            json.dump(
+                {
+                    "models_compared": result.models_compared,
+                    "metrics": metrics_dict,
+                    "winner_by_metric": result.winner_by_metric,
+                    "timestamp": result.timestamp,
+                },
+                f,
+                indent=2,
+            )
 
         print(f"\nResults saved to {self.output_dir}")
         print(f"Summary: {summary_path}")
@@ -407,8 +445,12 @@ class ModelComparison:
         # Performance Table
         lines.append("## Performance Metrics")
         lines.append("")
-        lines.append("| Model | FPS | Avg Time (ms) | Detection Rate | Avg Confidence | Avg Keypoints |")
-        lines.append("|-------|-----|---------------|----------------|----------------|---------------|")
+        lines.append(
+            "| Model | FPS | Avg Time (ms) | Detection Rate | Avg Confidence | Avg Keypoints |"
+        )
+        lines.append(
+            "|-------|-----|---------------|----------------|----------------|---------------|"
+        )
 
         for model_name, metrics in self.metrics.items():
             lines.append(
@@ -438,9 +480,7 @@ class ModelComparison:
                 lines.append("")
 
                 sorted_kps = sorted(
-                    metrics.keypoint_visibility.items(),
-                    key=lambda x: x[1],
-                    reverse=True
+                    metrics.keypoint_visibility.items(), key=lambda x: x[1], reverse=True
                 )
 
                 for kp_name, visibility in sorted_kps[:10]:  # Top 10
@@ -467,26 +507,28 @@ def create_comparison_from_config(config_path: str) -> ModelComparison:
 
     models = {}
 
-    for model_config in config.get('models', []):
-        model_type = model_config['type']
-        model_name = model_config['name']
+    for model_config in config.get("models", []):
+        model_type = model_config["type"]
+        model_name = model_config["name"]
 
-        if model_type == 'yolo':
+        if model_type == "yolo":
             from src.pose.yolo_estimator import YOLOPoseEstimator
+
             models[model_name] = YOLOPoseEstimator(
-                model_config.get('variant', 'yolo11n-pose.pt'),
-                model_config.get('device', 'cpu'),
-                model_config.get('confidence', 0.5),
+                model_config.get("variant", "yolo11n-pose.pt"),
+                model_config.get("device", "cpu"),
+                model_config.get("confidence", 0.5),
             )
 
-        elif model_type == 'mediapipe':
+        elif model_type == "mediapipe":
             from src.pose.mediapipe_estimator import MediaPipeEstimator
+
             models[model_name] = MediaPipeEstimator(
-                model_config.get('complexity', 1),
-                model_config.get('confidence', 0.5),
-                model_config.get('device', 'cpu'),
+                model_config.get("complexity", 1),
+                model_config.get("confidence", 0.5),
+                model_config.get("device", "cpu"),
             )
 
         # Add more model types as needed
 
-    return ModelComparison(models, config.get('output_dir', 'results/comparison'))
+    return ModelComparison(models, config.get("output_dir", "results/comparison"))

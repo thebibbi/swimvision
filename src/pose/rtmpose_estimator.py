@@ -10,22 +10,23 @@ Variants:
 - rtmpose-l: Large (30+ FPS, 76.7 AP)
 """
 
-from typing import Dict, List, Optional, Tuple
-import numpy as np
-import cv2
 from pathlib import Path
+from urllib.parse import urlparse
+
+import cv2
+import numpy as np
 
 from src.pose.base_estimator import (
     BasePoseEstimator,
     KeypointFormat,
-    PoseModel,
 )
 from src.utils.device_utils import get_optimal_device
 
 try:
-    from mmpose.apis import init_model, inference_topdown
-    from mmpose.structures import merge_data_samples, split_instances
     import mmcv
+    from mmpose.apis import inference_topdown, init_model
+    from mmpose.structures import merge_data_samples, split_instances
+
     MMPOSE_AVAILABLE = True
 except ImportError:
     MMPOSE_AVAILABLE = False
@@ -36,36 +37,36 @@ class RTMPoseEstimator(BasePoseEstimator):
 
     # Model configurations
     MODEL_CONFIGS = {
-        'rtmpose-t': {
-            'config': 'rtmpose-t_8xb256-420e_coco-256x192.py',
-            'checkpoint': 'rtmpose-t_simcc-coco_pt-aic-coco_420e-256x192.pth',
-            'url': 'https://download.openmmlab.com/mmpose/v1/projects/rtmposev1/rtmpose-t_simcc-coco_pt-aic-coco_420e-256x192-aff1f1fb_20230126.pth',
+        "rtmpose-t": {
+            "config": "rtmpose-t_8xb256-420e_coco-256x192.py",
+            "checkpoint": "rtmpose-t_simcc-coco_pt-aic-coco_420e-256x192.pth",
+            "url": "https://download.openmmlab.com/mmpose/v1/projects/rtmposev1/rtmpose-t_simcc-coco_pt-aic-coco_420e-256x192-aff1f1fb_20230126.pth",
         },
-        'rtmpose-s': {
-            'config': 'rtmpose-s_8xb256-420e_coco-256x192.py',
-            'checkpoint': 'rtmpose-s_simcc-coco_pt-aic-coco_420e-256x192.pth',
-            'url': 'https://download.openmmlab.com/mmpose/v1/projects/rtmposev1/rtmpose-s_simcc-coco_pt-aic-coco_420e-256x192-8edcf0d7_20230127.pth',
+        "rtmpose-s": {
+            "config": "rtmpose-s_8xb256-420e_coco-256x192.py",
+            "checkpoint": "rtmpose-s_simcc-coco_pt-aic-coco_420e-256x192.pth",
+            "url": "https://download.openmmlab.com/mmpose/v1/projects/rtmposev1/rtmpose-s_simcc-coco_pt-aic-coco_420e-256x192-8edcf0d7_20230127.pth",
         },
-        'rtmpose-m': {
-            'config': 'rtmpose-m_8xb256-420e_coco-256x192.py',
-            'checkpoint': 'rtmpose-m_simcc-coco_pt-aic-coco_420e-256x192.pth',
-            'url': 'https://download.openmmlab.com/mmpose/v1/projects/rtmposev1/rtmpose-m_simcc-coco_pt-aic-coco_420e-256x192-63eb25f7_20230126.pth',
+        "rtmpose-m": {
+            "config": "rtmpose-m_8xb256-420e_coco-256x192.py",
+            "checkpoint": "rtmpose-m_simcc-coco_pt-aic-coco_420e-256x192.pth",
+            "url": "https://download.openmmlab.com/mmpose/v1/projects/rtmposev1/rtmpose-m_simcc-coco_pt-aic-coco_420e-256x192-63eb25f7_20230126.pth",
         },
-        'rtmpose-l': {
-            'config': 'rtmpose-l_8xb256-420e_coco-256x192.py',
-            'checkpoint': 'rtmpose-l_simcc-coco_pt-aic-coco_420e-256x192.pth',
-            'url': 'https://download.openmmlab.com/mmpose/v1/projects/rtmposev1/rtmpose-l_simcc-coco_pt-aic-coco_420e-256x192-f016ffe0_20230126.pth',
+        "rtmpose-l": {
+            "config": "rtmpose-l_8xb256-420e_coco-256x192.py",
+            "checkpoint": "rtmpose-l_simcc-coco_pt-aic-coco_420e-256x192.pth",
+            "url": "https://download.openmmlab.com/mmpose/v1/projects/rtmposev1/rtmpose-l_simcc-coco_pt-aic-coco_420e-256x192-f016ffe0_20230126.pth",
         },
     }
 
     def __init__(
         self,
-        model_variant: str = 'rtmpose-m',
-        config_path: Optional[str] = None,
-        checkpoint_path: Optional[str] = None,
-        device: str = 'auto',
+        model_variant: str = "rtmpose-m",
+        config_path: str | None = None,
+        checkpoint_path: str | None = None,
+        device: str = "auto",
         confidence: float = 0.5,
-        models_dir: str = 'models/rtmpose',
+        models_dir: str = "models/rtmpose",
     ):
         """Initialize RTMPose estimator.
 
@@ -78,7 +79,7 @@ class RTMPoseEstimator(BasePoseEstimator):
             models_dir: Directory containing model files
         """
         # Auto-detect optimal device if not specified
-        if device == 'auto':
+        if device == "auto":
             device = get_optimal_device()
         else:
             device = get_optimal_device(preferred=device)
@@ -102,13 +103,13 @@ class RTMPoseEstimator(BasePoseEstimator):
 
             if config_path is None:
                 # Try to find config in MMPose installation
-                config_path = self._find_config(model_info['config'])
+                config_path = self._find_config(model_info["config"])
 
             if checkpoint_path is None:
-                checkpoint_path = self.models_dir / model_info['checkpoint']
+                checkpoint_path = self.models_dir / model_info["checkpoint"]
                 # Download if not exists
                 if not checkpoint_path.exists():
-                    self._download_checkpoint(model_info['url'], checkpoint_path)
+                    self._download_checkpoint(model_info["url"], checkpoint_path)
         else:
             if config_path is None or checkpoint_path is None:
                 raise ValueError(
@@ -132,12 +133,19 @@ class RTMPoseEstimator(BasePoseEstimator):
         """
         try:
             import mmpose
+
             mmpose_path = Path(mmpose.__file__).parent
 
             # Search for config
             possible_paths = [
-                mmpose_path / '.mim' / 'configs' / 'body_2d_keypoint' / 'rtmpose' / 'coco' / config_name,
-                mmpose_path / 'configs' / 'body_2d_keypoint' / 'rtmpose' / 'coco' / config_name,
+                mmpose_path
+                / ".mim"
+                / "configs"
+                / "body_2d_keypoint"
+                / "rtmpose"
+                / "coco"
+                / config_name,
+                mmpose_path / "configs" / "body_2d_keypoint" / "rtmpose" / "coco" / config_name,
             ]
 
             for path in possible_paths:
@@ -147,7 +155,7 @@ class RTMPoseEstimator(BasePoseEstimator):
             # If not found, return name and let MMPose handle it
             return f"rtmpose/{config_name}"
 
-        except Exception as e:
+        except Exception:
             # Fall back to config name
             return f"rtmpose/{config_name}"
 
@@ -159,7 +167,14 @@ class RTMPoseEstimator(BasePoseEstimator):
             save_path: Path to save checkpoint
         """
         import urllib.request
+
         from tqdm import tqdm
+
+        parsed = urlparse(url)
+        if parsed.scheme not in {"https", "http"}:
+            raise ValueError(f"Unsupported checkpoint URL scheme: {parsed.scheme}")
+        if not parsed.netloc:
+            raise ValueError("Checkpoint URL must include a network location")
 
         print(f"Downloading {self.model_variant} checkpoint...")
         print(f"  URL: {url}")
@@ -171,8 +186,8 @@ class RTMPoseEstimator(BasePoseEstimator):
                     self.total = tsize
                 self.update(b * bsize - self.n)
 
-        with DownloadProgressBar(unit='B', unit_scale=True, miniters=1) as t:
-            urllib.request.urlretrieve(url, save_path, reporthook=t.update_to)
+        with DownloadProgressBar(unit="B", unit_scale=True, miniters=1) as t:
+            urllib.request.urlretrieve(url, save_path, reporthook=t.update_to)  # nosec B310
 
         print(f"✅ Downloaded checkpoint to {save_path}")
 
@@ -184,9 +199,7 @@ class RTMPoseEstimator(BasePoseEstimator):
         print(f"  Device: {self.device}")
 
         self.model = init_model(
-            str(self.config_path),
-            str(self.checkpoint_path),
-            device=self.device
+            str(self.config_path), str(self.checkpoint_path), device=self.device
         )
 
         print(f"✅ {self.model_variant} loaded successfully")
@@ -195,8 +208,8 @@ class RTMPoseEstimator(BasePoseEstimator):
         self,
         image: np.ndarray,
         return_image: bool = True,
-        bbox: Optional[np.ndarray] = None,
-    ) -> Tuple[Optional[List[Dict]], Optional[np.ndarray]]:
+        bbox: np.ndarray | None = None,
+    ) -> tuple[list[dict] | None, np.ndarray | None]:
         """Estimate pose using RTMPose.
 
         Args:
@@ -228,30 +241,22 @@ class RTMPoseEstimator(BasePoseEstimator):
 
         for idx, result in enumerate(results):
             # Get keypoints from result
-            if hasattr(result, 'pred_instances'):
+            if hasattr(result, "pred_instances"):
                 pred_instances = result.pred_instances
 
                 keypoints = pred_instances.keypoints[0]  # (17, 2)
                 scores = pred_instances.keypoint_scores[0]  # (17,)
 
                 # Combine into (17, 3) format
-                keypoints_with_scores = np.concatenate([
-                    keypoints,
-                    scores.reshape(-1, 1)
-                ], axis=1)
+                keypoints_with_scores = np.concatenate([keypoints, scores.reshape(-1, 1)], axis=1)
 
                 # Get bounding box
-                if hasattr(pred_instances, 'bboxes'):
+                if hasattr(pred_instances, "bboxes"):
                     bbox_pred = pred_instances.bboxes[0].cpu().numpy()
                 else:
                     bbox_pred = bbox[idx, :4]
 
-                pose_data = self._format_output(
-                    keypoints_with_scores,
-                    bbox_pred,
-                    idx,
-                    image.shape
-                )
+                pose_data = self._format_output(keypoints_with_scores, bbox_pred, idx, image.shape)
 
                 # Filter by confidence
                 if np.mean(scores) > self.confidence:
@@ -273,8 +278,8 @@ class RTMPoseEstimator(BasePoseEstimator):
         keypoints: np.ndarray,
         bbox: np.ndarray,
         person_id: int,
-        image_shape: Tuple[int, int, int],
-    ) -> Dict:
+        image_shape: tuple[int, int, int],
+    ) -> dict:
         """Format RTMPose output to standard format.
 
         Args:
@@ -288,34 +293,53 @@ class RTMPoseEstimator(BasePoseEstimator):
         """
         # COCO-17 keypoint names
         keypoint_names = [
-            'nose',
-            'left_eye', 'right_eye',
-            'left_ear', 'right_ear',
-            'left_shoulder', 'right_shoulder',
-            'left_elbow', 'right_elbow',
-            'left_wrist', 'right_wrist',
-            'left_hip', 'right_hip',
-            'left_knee', 'right_knee',
-            'left_ankle', 'right_ankle',
+            "nose",
+            "left_eye",
+            "right_eye",
+            "left_ear",
+            "right_ear",
+            "left_shoulder",
+            "right_shoulder",
+            "left_elbow",
+            "right_elbow",
+            "left_wrist",
+            "right_wrist",
+            "left_hip",
+            "right_hip",
+            "left_knee",
+            "right_knee",
+            "left_ankle",
+            "right_ankle",
         ]
 
+        # Build dictionary format compatible with YOLO
+        keypoints_dict = {}
+        for i, name in enumerate(keypoint_names):
+            keypoints_dict[name] = {
+                "x": float(keypoints[i, 0]),
+                "y": float(keypoints[i, 1]),
+                "confidence": float(keypoints[i, 2]),
+            }
+
         return {
-            'keypoints': keypoints,
-            'keypoint_names': keypoint_names,
-            'bbox': bbox[:4].tolist() if len(bbox) >= 4 else bbox.tolist(),
-            'person_id': person_id,
-            'format': self.get_keypoint_format(),
-            'metadata': {
-                'model': self.model_variant,
-                'confidence_threshold': self.confidence,
-                'image_shape': image_shape,
+            "keypoints": keypoints_dict,  # Dictionary format for compatibility
+            "keypoints_array": keypoints,  # Array format for legacy code
+            "keypoint_names": keypoint_names,
+            "bbox": bbox[:4].tolist() if len(bbox) >= 4 else bbox.tolist(),
+            "person_id": person_id,
+            "format": self.get_keypoint_format(),
+            "confidence": float(np.mean(keypoints[:, 2])),
+            "metadata": {
+                "model": self.model_variant,
+                "confidence_threshold": self.confidence,
+                "image_shape": image_shape,
             },
         }
 
     def _draw_poses(
         self,
         image: np.ndarray,
-        pose_data_list: List[Dict],
+        pose_data_list: list[dict],
     ) -> np.ndarray:
         """Draw poses on image.
 
@@ -328,31 +352,44 @@ class RTMPoseEstimator(BasePoseEstimator):
         """
         # COCO skeleton connections
         skeleton = [
-            (0, 1), (0, 2), (1, 3), (2, 4),  # Head
+            (0, 1),
+            (0, 2),
+            (1, 3),
+            (2, 4),  # Head
             (5, 6),  # Shoulders
-            (5, 7), (7, 9), (6, 8), (8, 10),  # Arms
-            (5, 11), (6, 12), (11, 12),  # Torso
-            (11, 13), (13, 15), (12, 14), (14, 16),  # Legs
+            (5, 7),
+            (7, 9),
+            (6, 8),
+            (8, 10),  # Arms
+            (5, 11),
+            (6, 12),
+            (11, 12),  # Torso
+            (11, 13),
+            (13, 15),
+            (12, 14),
+            (14, 16),  # Legs
         ]
 
         # Colors for different people
         colors = [
-            (255, 0, 0),    # Red
-            (0, 255, 0),    # Green
-            (0, 0, 255),    # Blue
+            (255, 0, 0),  # Red
+            (0, 255, 0),  # Green
+            (0, 0, 255),  # Blue
             (255, 255, 0),  # Cyan
             (255, 0, 255),  # Magenta
         ]
 
         for idx, pose_data in enumerate(pose_data_list):
-            keypoints = pose_data['keypoints']
+            # Use array format for drawing
+            keypoints = pose_data.get("keypoints_array", pose_data["keypoints"])
             color = colors[idx % len(colors)]
 
             # Draw skeleton
             for start_idx, end_idx in skeleton:
-                if (keypoints[start_idx, 2] > self.confidence and
-                    keypoints[end_idx, 2] > self.confidence):
-
+                if (
+                    keypoints[start_idx, 2] > self.confidence
+                    and keypoints[end_idx, 2] > self.confidence
+                ):
                     pt1 = tuple(keypoints[start_idx, :2].astype(int))
                     pt2 = tuple(keypoints[end_idx, :2].astype(int))
 
@@ -366,19 +403,13 @@ class RTMPoseEstimator(BasePoseEstimator):
                     cv2.circle(image, (x, y), 4, (255, 255, 255), 1)
 
             # Draw bounding box
-            bbox = pose_data['bbox']
+            bbox = pose_data["bbox"]
             x1, y1, x2, y2 = map(int, bbox[:4])
             cv2.rectangle(image, (x1, y1), (x2, y2), color, 2)
 
             # Draw person ID
             cv2.putText(
-                image,
-                f"Person {idx}",
-                (x1, y1 - 10),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.5,
-                color,
-                2
+                image, f"Person {idx}", (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2
             )
 
         return image
@@ -395,17 +426,17 @@ class RTMPoseEstimator(BasePoseEstimator):
         """RTMPose supports multi-person detection."""
         return True
 
-    def get_model_info(self) -> Dict:
+    def get_model_info(self) -> dict:
         """Get model information."""
         return {
-            'name': self.model_variant,
-            'framework': 'MMPose',
-            'keypoint_format': 'COCO-17',
-            'num_keypoints': 17,
-            'supports_3d': False,
-            'supports_multi_person': True,
-            'config': str(self.config_path),
-            'checkpoint': str(self.checkpoint_path),
+            "name": self.model_variant,
+            "framework": "MMPose",
+            "keypoint_format": "COCO-17",
+            "num_keypoints": 17,
+            "supports_3d": False,
+            "supports_multi_person": True,
+            "config": str(self.config_path),
+            "checkpoint": str(self.checkpoint_path),
         }
 
 
@@ -417,8 +448,8 @@ def demo_rtmpose():
     # Create estimator
     print("\nInitializing RTMPose (medium variant)...")
     estimator = RTMPoseEstimator(
-        model_variant='rtmpose-m',
-        device='cpu',  # Use CPU for demo
+        model_variant="rtmpose-m",
+        device="cpu",  # Use CPU for demo
         confidence=0.5,
     )
 
@@ -439,8 +470,10 @@ def demo_rtmpose():
     if poses:
         print(f"✅ Detected {len(poses)} person(s)")
         for idx, pose in enumerate(poses):
-            avg_conf = np.mean(pose['keypoints'][:, 2])
-            print(f"  Person {idx}: {len(pose['keypoints'])} keypoints, avg confidence: {avg_conf:.3f}")
+            avg_conf = np.mean(pose["keypoints"][:, 2])
+            print(
+                f"  Person {idx}: {len(pose['keypoints'])} keypoints, avg confidence: {avg_conf:.3f}"
+            )
     else:
         print("  No poses detected (expected on blank image)")
 

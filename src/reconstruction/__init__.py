@@ -49,3 +49,4 @@ __all__ = [
     "PRESET_UNDERWATER",
     "PRESET_MULTICAM",
 ]
+__all__: list[str] = []

@@ -1,7 +1,6 @@
 """Video file camera implementation."""
 
 from pathlib import Path
-from typing import Optional, Tuple
 
 import cv2
 import numpy as np
@@ -29,7 +28,7 @@ class VideoFileCamera(BaseCamera):
         if not self.video_path.exists():
             raise FileNotFoundError(f"Video file not found: {video_path}")
 
-        self._cap: Optional[cv2.VideoCapture] = None
+        self._cap: cv2.VideoCapture | None = None
         self._total_frames = 0
         self._current_frame = 0
 
@@ -64,7 +63,7 @@ class VideoFileCamera(BaseCamera):
             print(f"Error opening video file: {e}")
             return False
 
-    def read(self) -> Tuple[bool, Optional[np.ndarray]]:
+    def read(self) -> tuple[bool, np.ndarray | None]:
         """Read a single frame from video file.
 
         Returns:
@@ -114,7 +113,7 @@ class VideoFileCamera(BaseCamera):
         """
         return self._fps
 
-    def get_resolution(self) -> Tuple[int, int]:
+    def get_resolution(self) -> tuple[int, int]:
         """Get video resolution.
 
         Returns:

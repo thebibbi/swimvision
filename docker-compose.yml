@@ -12,17 +12,17 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-swimvision_dev}
       POSTGRES_DB: ${POSTGRES_DB:-swimvision}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+    - ${POSTGRES_PORT:-5432}:5432
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init.sql
+    - postgres_data:/var/lib/postgresql/data
+    - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-swimvision}"]
+      test: [CMD-SHELL, 'pg_isready -U ${POSTGRES_USER:-swimvision}']
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - swimvision-network
+    - swimvision-network
 
   # ========================================
   # SwimVision App - Development
@@ -34,30 +34,30 @@ services:
       target: development
     container_name: swimvision-app-dev
     ports:
-      - "${STREAMLIT_PORT:-8501}:8501"
+    - ${STREAMLIT_PORT:-8501}:8501
     environment:
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
-      - POSTGRES_USER=${POSTGRES_USER:-swimvision}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-swimvision_dev}
-      - POSTGRES_DB=${POSTGRES_DB:-swimvision}
-      - PYTHONPATH=/app
+    - POSTGRES_HOST=postgres
+    - POSTGRES_PORT=5432
+    - POSTGRES_USER=${POSTGRES_USER:-swimvision}
+    - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-swimvision_dev}
+    - POSTGRES_DB=${POSTGRES_DB:-swimvision}
+    - PYTHONPATH=/app
     volumes:
       # Mount source code for live reloading
-      - ./src:/app/src
-      - ./config:/app/config
-      - ./tests:/app/tests
-      - ./data:/app/data
-      - ./models:/app/models
+    - ./src:/app/src
+    - ./config:/app/config
+    - ./tests:/app/tests
+    - ./data:/app/data
+    - ./models:/app/models
       # Preserve Python packages
-      - dev_venv:/usr/local/lib/python3.10/site-packages
+    - dev_venv:/usr/local/lib/python3.10/site-packages
     depends_on:
       postgres:
         condition: service_healthy
     networks:
-      - swimvision-network
+    - swimvision-network
     profiles:
-      - dev
+    - dev
 
   # ========================================
   # SwimVision App - Production
@@ -69,25 +69,25 @@ services:
       target: production
     container_name: swimvision-app-prod
     ports:
-      - "${STREAMLIT_PORT:-8501}:8501"
+    - ${STREAMLIT_PORT:-8501}:8501
     environment:
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
-      - POSTGRES_USER=${POSTGRES_USER:-swimvision}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-swimvision_dev}
-      - POSTGRES_DB=${POSTGRES_DB:-swimvision}
+    - POSTGRES_HOST=postgres
+    - POSTGRES_PORT=5432
+    - POSTGRES_USER=${POSTGRES_USER:-swimvision}
+    - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-swimvision_dev}
+    - POSTGRES_DB=${POSTGRES_DB:-swimvision}
     volumes:
-      - ./data:/app/data:ro
-      - ./models:/app/models:ro
-      - ./config:/app/config:ro
+    - ./data:/app/data:ro
+    - ./models:/app/models:ro
+    - ./config:/app/config:ro
     depends_on:
       postgres:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - swimvision-network
+    - swimvision-network
     profiles:
-      - prod
+    - prod
 
   # ========================================
   # SwimVision App - GPU Support
@@ -99,19 +99,19 @@ services:
       target: gpu-base
     container_name: swimvision-app-gpu
     ports:
-      - "${STREAMLIT_PORT:-8501}:8501"
+    - ${STREAMLIT_PORT:-8501}:8501
     environment:
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
-      - POSTGRES_USER=${POSTGRES_USER:-swimvision}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-swimvision_dev}
-      - POSTGRES_DB=${POSTGRES_DB:-swimvision}
-      - NVIDIA_VISIBLE_DEVICES=all
-      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    - POSTGRES_HOST=postgres
+    - POSTGRES_PORT=5432
+    - POSTGRES_USER=${POSTGRES_USER:-swimvision}
+    - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-swimvision_dev}
+    - POSTGRES_DB=${POSTGRES_DB:-swimvision}
+    - NVIDIA_VISIBLE_DEVICES=all
+    - NVIDIA_DRIVER_CAPABILITIES=compute,utility
     volumes:
-      - ./data:/app/data
-      - ./models:/app/models
-      - ./config:/app/config
+    - ./data:/app/data
+    - ./models:/app/models
+    - ./config:/app/config
     depends_on:
       postgres:
         condition: service_healthy
@@ -119,13 +119,13 @@ services:
       resources:
         reservations:
           devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
+          - driver: nvidia
+            count: 1
+            capabilities: [gpu]
     networks:
-      - swimvision-network
+    - swimvision-network
     profiles:
-      - gpu
+    - gpu
 
   # ========================================
   # pgAdmin - Database Management (Optional)
@@ -138,15 +138,15 @@ services:
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
       PGADMIN_CONFIG_SERVER_MODE: 'False'
     ports:
-      - "${PGADMIN_PORT:-5050}:80"
+    - ${PGADMIN_PORT:-5050}:80
     volumes:
-      - pgadmin_data:/var/lib/pgadmin
+    - pgadmin_data:/var/lib/pgadmin
     depends_on:
-      - postgres
+    - postgres
     networks:
-      - swimvision-network
+    - swimvision-network
     profiles:
-      - tools
+    - tools
 
 volumes:
   postgres_data:

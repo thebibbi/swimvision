@@ -7,7 +7,6 @@ This module provides various smoothing techniques to reduce noise in pose estima
 - Outlier detection and removal
 """
 
-from typing import List, Tuple, Optional, Union
 import numpy as np
 from scipy.signal import savgol_filter
 from scipy.stats import zscore
@@ -65,7 +64,7 @@ class KalmanFilter1D:
 
         return self.state
 
-    def reset(self, value: Optional[float] = None):
+    def reset(self, value: float | None = None):
         """Reset filter state.
 
         Args:
@@ -103,18 +102,10 @@ class KalmanFilter2D:
         self.state = np.zeros(4)
 
         # State transition matrix (constant velocity model)
-        self.F = np.array([
-            [1, 0, dt, 0],
-            [0, 1, 0, dt],
-            [0, 0, 1, 0],
-            [0, 0, 0, 1]
-        ])
+        self.F = np.array([[1, 0, dt, 0], [0, 1, 0, dt], [0, 0, 1, 0], [0, 0, 0, 1]])
 
         # Measurement matrix (we only observe position)
-        self.H = np.array([
-            [1, 0, 0, 0],
-            [0, 1, 0, 0]
-        ])
+        self.H = np.array([[1, 0, 0, 0], [0, 1, 0, 0]])
 
         # Process noise covariance
         self.Q = np.eye(4) * process_variance
@@ -179,7 +170,7 @@ def smooth_trajectory_kalman(
     process_variance: float = 1e-5,
     measurement_variance: float = 1e-1,
     dt: float = 1.0,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """Smooth a 2D trajectory using Kalman filtering.
 
     Args:
@@ -273,7 +264,7 @@ def smooth_trajectory_savgol(
 def moving_average(
     signal: np.ndarray,
     window_size: int = 5,
-    mode: str = 'valid',
+    mode: str = "valid",
 ) -> np.ndarray:
     """Apply moving average filter to signal.
 
@@ -312,8 +303,8 @@ def smooth_trajectory_ma(
         return trajectory
 
     smoothed = np.zeros_like(trajectory)
-    smoothed[:, 0] = moving_average(trajectory[:, 0], window_size, mode='same')
-    smoothed[:, 1] = moving_average(trajectory[:, 1], window_size, mode='same')
+    smoothed[:, 0] = moving_average(trajectory[:, 0], window_size, mode="same")
+    smoothed[:, 1] = moving_average(trajectory[:, 1], window_size, mode="same")
 
     return smoothed
 
@@ -334,7 +325,7 @@ def detect_outliers_zscore(
     if len(signal) < 3:
         return np.zeros(len(signal), dtype=bool)
 
-    z_scores = np.abs(zscore(signal, nan_policy='omit'))
+    z_scores = np.abs(zscore(signal, nan_policy="omit"))
     return z_scores > threshold
 
 
@@ -366,7 +357,7 @@ def detect_outliers_iqr(
 
 def remove_outliers(
     signal: np.ndarray,
-    method: str = 'zscore',
+    method: str = "zscore",
     threshold: float = 3.0,
     interpolate: bool = True,
 ) -> np.ndarray:
@@ -381,9 +372,9 @@ def remove_outliers(
     Returns:
         Signal with outliers removed/interpolated.
     """
-    if method == 'zscore':
+    if method == "zscore":
         outliers = detect_outliers_zscore(signal, threshold)
-    elif method == 'iqr':
+    elif method == "iqr":
         outliers = detect_outliers_iqr(signal, threshold)
     else:
         raise ValueError(f"Unknown method: {method}")
@@ -395,9 +386,7 @@ def remove_outliers(
         valid_indices = np.where(~outliers)[0]
         if len(valid_indices) > 1:
             signal_clean[outliers] = np.interp(
-                np.where(outliers)[0],
-                valid_indices,
-                signal[valid_indices]
+                np.where(outliers)[0], valid_indices, signal[valid_indices]
             )
     else:
         # Replace with NaN
@@ -407,11 +396,11 @@ def remove_outliers(
 
 
 def smooth_pose_sequence(
-    pose_sequence: List[dict],
+    pose_sequence: list[dict],
     keypoint_name: str,
-    method: str = 'kalman',
+    method: str = "kalman",
     **kwargs,
-) -> List[Tuple[float, float]]:
+) -> list[tuple[float, float]]:
     """Smooth a specific keypoint trajectory across pose sequence.
 
     Args:
@@ -426,8 +415,8 @@ def smooth_pose_sequence(
     # Extract trajectory
     trajectory = []
     for pose in pose_sequence:
-        keypoints = pose.get('keypoints', [])
-        keypoint_names = pose.get('keypoint_names', [])
+        keypoints = pose.get("keypoints", [])
+        keypoint_names = pose.get("keypoint_names", [])
 
         if keypoint_name in keypoint_names:
             idx = keypoint_names.index(keypoint_name)
@@ -446,11 +435,11 @@ def smooth_pose_sequence(
         return []
 
     # Apply smoothing
-    if method == 'kalman':
+    if method == "kalman":
         smoothed, _ = smooth_trajectory_kalman(trajectory, **kwargs)
-    elif method == 'savgol':
+    elif method == "savgol":
         smoothed = smooth_trajectory_savgol(trajectory, **kwargs)
-    elif method == 'ma':
+    elif method == "ma":
         smoothed = smooth_trajectory_ma(trajectory, **kwargs)
     else:
         raise ValueError(f"Unknown smoothing method: {method}")

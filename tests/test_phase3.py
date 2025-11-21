@@ -8,15 +8,15 @@ from src.analysis.symmetry_analyzer import SymmetryAnalyzer
 from src.utils.smoothing import (
     KalmanFilter1D,
     KalmanFilter2D,
-    smooth_trajectory_kalman,
-    smooth_trajectory_savgol,
-    smooth_trajectory_ma,
-    calculate_velocity,
     calculate_acceleration,
     calculate_speed,
-    moving_average,
-    detect_outliers_zscore,
+    calculate_velocity,
     detect_outliers_iqr,
+    detect_outliers_zscore,
+    moving_average,
+    smooth_trajectory_kalman,
+    smooth_trajectory_ma,
+    smooth_trajectory_savgol,
 )
 
 
@@ -61,11 +61,13 @@ class TestKalmanFilter2D:
     def test_update(self):
         """Test filter update."""
         kf = KalmanFilter2D()
-        measurements = np.array([
-            [1.0, 2.0],
-            [2.0, 3.0],
-            [3.0, 4.0],
-        ])
+        measurements = np.array(
+            [
+                [1.0, 2.0],
+                [2.0, 3.0],
+                [3.0, 4.0],
+            ]
+        )
 
         for measurement in measurements:
             position = kf.update(measurement)
@@ -74,11 +76,13 @@ class TestKalmanFilter2D:
     def test_velocity_estimation(self):
         """Test velocity estimation."""
         kf = KalmanFilter2D(dt=1.0)
-        measurements = np.array([
-            [0.0, 0.0],
-            [1.0, 0.0],
-            [2.0, 0.0],
-        ])
+        measurements = np.array(
+            [
+                [0.0, 0.0],
+                [1.0, 0.0],
+                [2.0, 0.0],
+            ]
+        )
 
         for measurement in measurements:
             kf.update(measurement)
@@ -94,12 +98,14 @@ class TestTrajectorySmoothing:
 
     def test_smooth_trajectory_kalman(self):
         """Test Kalman trajectory smoothing."""
-        trajectory = np.array([
-            [0.0, 0.0],
-            [1.0, 1.0],
-            [2.0, 2.0],
-            [3.0, 3.0],
-        ])
+        trajectory = np.array(
+            [
+                [0.0, 0.0],
+                [1.0, 1.0],
+                [2.0, 2.0],
+                [3.0, 3.0],
+            ]
+        )
 
         smoothed, velocities = smooth_trajectory_kalman(trajectory)
 
@@ -108,13 +114,15 @@ class TestTrajectorySmoothing:
 
     def test_smooth_trajectory_savgol(self):
         """Test Savitzky-Golay smoothing."""
-        trajectory = np.array([
-            [0.0, 0.0],
-            [1.0, 1.0],
-            [2.0, 2.0],
-            [3.0, 3.0],
-            [4.0, 4.0],
-        ])
+        trajectory = np.array(
+            [
+                [0.0, 0.0],
+                [1.0, 1.0],
+                [2.0, 2.0],
+                [3.0, 3.0],
+                [4.0, 4.0],
+            ]
+        )
 
         smoothed = smooth_trajectory_savgol(trajectory, window_length=3, polyorder=2)
 
@@ -122,13 +130,15 @@ class TestTrajectorySmoothing:
 
     def test_smooth_trajectory_ma(self):
         """Test moving average smoothing."""
-        trajectory = np.array([
-            [0.0, 0.0],
-            [1.0, 1.0],
-            [2.0, 2.0],
-            [3.0, 3.0],
-            [4.0, 4.0],
-        ])
+        trajectory = np.array(
+            [
+                [0.0, 0.0],
+                [1.0, 1.0],
+                [2.0, 2.0],
+                [3.0, 3.0],
+                [4.0, 4.0],
+            ]
+        )
 
         smoothed = smooth_trajectory_ma(trajectory, window_size=3)
 
@@ -140,12 +150,14 @@ class TestKinematicCalculations:
 
     def test_calculate_velocity(self):
         """Test velocity calculation."""
-        trajectory = np.array([
-            [0.0, 0.0],
-            [1.0, 0.0],
-            [2.0, 0.0],
-            [3.0, 0.0],
-        ])
+        trajectory = np.array(
+            [
+                [0.0, 0.0],
+                [1.0, 0.0],
+                [2.0, 0.0],
+                [3.0, 0.0],
+            ]
+        )
 
         velocities = calculate_velocity(trajectory, dt=1.0, smooth=False)
 
@@ -155,12 +167,14 @@ class TestKinematicCalculations:
 
     def test_calculate_acceleration(self):
         """Test acceleration calculation."""
-        trajectory = np.array([
-            [0.0, 0.0],
-            [1.0, 0.0],
-            [3.0, 0.0],
-            [6.0, 0.0],
-        ])
+        trajectory = np.array(
+            [
+                [0.0, 0.0],
+                [1.0, 0.0],
+                [3.0, 0.0],
+                [6.0, 0.0],
+            ]
+        )
 
         accelerations = calculate_acceleration(trajectory, dt=1.0, smooth=False)
 
@@ -170,10 +184,12 @@ class TestKinematicCalculations:
 
     def test_calculate_speed(self):
         """Test speed calculation."""
-        velocities = np.array([
-            [3.0, 4.0],
-            [5.0, 12.0],
-        ])
+        velocities = np.array(
+            [
+                [3.0, 4.0],
+                [5.0, 12.0],
+            ]
+        )
 
         speeds = calculate_speed(velocities)
 
@@ -213,15 +229,9 @@ class TestFeaturesExtractor:
         num_frames = 50
         t = np.linspace(0, 2 * np.pi, num_frames)
 
-        left_hand_path = np.column_stack([
-            100 + 50 * np.sin(t),
-            200 + 30 * np.cos(t)
-        ])
+        left_hand_path = np.column_stack([100 + 50 * np.sin(t), 200 + 30 * np.cos(t)])
 
-        right_hand_path = np.column_stack([
-            300 + 50 * np.sin(t),
-            200 + 30 * np.cos(t)
-        ])
+        right_hand_path = np.column_stack([300 + 50 * np.sin(t), 200 + 30 * np.cos(t)])
 
         angles_over_time = {
             "left_elbow": 90 + 40 * np.sin(t),
@@ -301,16 +311,10 @@ class TestSymmetryAnalyzer:
         num_frames = 50
         t = np.linspace(0, 2 * np.pi, num_frames)
 
-        left_hand_path = np.column_stack([
-            100 + 50 * np.sin(t),
-            200 + 30 * np.cos(t)
-        ])
+        left_hand_path = np.column_stack([100 + 50 * np.sin(t), 200 + 30 * np.cos(t)])
 
         # Right hand with slight asymmetry
-        right_hand_path = np.column_stack([
-            300 + 45 * np.sin(t),
-            200 + 28 * np.cos(t)
-        ])
+        right_hand_path = np.column_stack([300 + 45 * np.sin(t), 200 + 28 * np.cos(t)])
 
         angles_over_time = {
             "left_elbow": 90 + 40 * np.sin(t),
@@ -397,7 +401,7 @@ class TestMovingAverage:
     def test_moving_average_valid(self):
         """Test moving average with valid mode."""
         signal = np.array([1, 2, 3, 4, 5])
-        result = moving_average(signal, window_size=3, mode='valid')
+        result = moving_average(signal, window_size=3, mode="valid")
 
         assert len(result) == 3
         np.testing.assert_array_almost_equal(result, [2.0, 3.0, 4.0])
@@ -405,7 +409,7 @@ class TestMovingAverage:
     def test_moving_average_same(self):
         """Test moving average with same mode."""
         signal = np.array([1, 2, 3, 4, 5])
-        result = moving_average(signal, window_size=3, mode='same')
+        result = moving_average(signal, window_size=3, mode="same")
 
         assert len(result) == len(signal)
 

@@ -7,35 +7,37 @@ Combines different tracking approaches:
 - Hybrid approaches
 """
 
-from enum import Enum
-from typing import Optional, Dict, List, Tuple
 from dataclasses import dataclass
-import numpy as np
-from scipy.interpolate import interp1d, CubicSpline
+from enum import Enum
 
+import numpy as np
+from scipy.interpolate import interp1d
+
+from src.analysis.stroke_phases import StrokePhase
 from src.tracking.occlusion_detector import OcclusionDetector, OcclusionState
 from src.utils.smoothing import KalmanFilter2D
-from src.analysis.stroke_phases import StrokePhase
 
 
 class TrackingMethod(Enum):
     """Available tracking methods for occlusion handling."""
-    KALMAN_ONLY = "kalman"                    # Pure Kalman filtering
-    KALMAN_PREDICT = "kalman_predict"        # Kalman with prediction during occlusion
-    PHASE_AWARE = "phase_aware"              # Stroke phase constraints
-    INTERPOLATION = "interpolation"          # Post-process interpolation
-    HYBRID = "hybrid"                        # Combine multiple methods
+
+    KALMAN_ONLY = "kalman"  # Pure Kalman filtering
+    KALMAN_PREDICT = "kalman_predict"  # Kalman with prediction during occlusion
+    PHASE_AWARE = "phase_aware"  # Stroke phase constraints
+    INTERPOLATION = "interpolation"  # Post-process interpolation
+    HYBRID = "hybrid"  # Combine multiple methods
 
 
 @dataclass
 class TrackingResult:
     """Result from hand tracking."""
-    position: np.ndarray                     # Estimated position [x, y]
-    confidence: float                        # Tracking confidence (0-1)
-    occlusion_state: OcclusionState         # Current occlusion state
-    method_used: TrackingMethod             # Method that produced this result
-    is_predicted: bool                      # True if position is predicted (not observed)
-    velocity: Optional[np.ndarray] = None   # Estimated velocity [vx, vy]
+
+    position: np.ndarray  # Estimated position [x, y]
+    confidence: float  # Tracking confidence (0-1)
+    occlusion_state: OcclusionState  # Current occlusion state
+    method_used: TrackingMethod  # Method that produced this result
+    is_predicted: bool  # True if position is predicted (not observed)
+    velocity: np.ndarray | None = None  # Estimated velocity [vx, vy]
 
 
 class HandTracker:
@@ -80,23 +82,23 @@ class HandTracker:
         )
 
         # Tracking history
-        self.position_history: List[np.ndarray] = []
-        self.confidence_history: List[float] = []
-        self.occlusion_history: List[OcclusionState] = []
-        self.prediction_segments: List[Dict] = []  # Track prediction segments
+        self.position_history: list[np.ndarray] = []
+        self.confidence_history: list[float] = []
+        self.occlusion_history: list[OcclusionState] = []
+        self.prediction_segments: list[dict] = []  # Track prediction segments
 
         # Phase-aware tracking
-        self.current_phase: Optional[StrokePhase] = None
-        self.phase_templates: Dict[str, np.ndarray] = {}  # Ideal phase trajectories
+        self.current_phase: StrokePhase | None = None
+        self.phase_templates: dict[str, np.ndarray] = {}  # Ideal phase trajectories
 
         # For interpolation method
-        self.pending_interpolation: Optional[Dict] = None
+        self.pending_interpolation: dict | None = None
 
     def update(
         self,
-        observation: Optional[np.ndarray],
+        observation: np.ndarray | None,
         confidence: float,
-        stroke_phase: Optional[StrokePhase] = None,
+        stroke_phase: StrokePhase | None = None,
     ) -> TrackingResult:
         """Update tracker with new observation.
 
@@ -147,7 +149,7 @@ class HandTracker:
 
     def _track_kalman_only(
         self,
-        observation: Optional[np.ndarray],
+        observation: np.ndarray | None,
         confidence: float,
         occlusion_state: OcclusionState,
     ) -> TrackingResult:
@@ -183,7 +185,7 @@ class HandTracker:
 
     def _track_kalman_predict(
         self,
-        observation: Optional[np.ndarray],
+        observation: np.ndarray | None,
         confidence: float,
         occlusion_state: OcclusionState,
     ) -> TrackingResult:
@@ -232,7 +234,7 @@ class HandTracker:
 
     def _track_phase_aware(
         self,
-        observation: Optional[np.ndarray],
+        observation: np.ndarray | None,
         confidence: float,
         occlusion_state: OcclusionState,
     ) -> TrackingResult:
@@ -305,7 +307,7 @@ class HandTracker:
 
     def _track_interpolation(
         self,
-        observation: Optional[np.ndarray],
+        observation: np.ndarray | None,
         confidence: float,
         occlusion_state: OcclusionState,
     ) -> TrackingResult:
@@ -343,12 +345,12 @@ class HandTracker:
                 # Start new occlusion segment
                 last_visible = self.position_history[-1] if self.position_history else np.zeros(2)
                 self.pending_interpolation = {
-                    'start_pos': last_visible,
-                    'start_frame': len(self.position_history),
+                    "start_pos": last_visible,
+                    "start_frame": len(self.position_history),
                 }
 
             # Use last known position (will be updated retroactively)
-            position = self.pending_interpolation['start_pos']
+            position = self.pending_interpolation["start_pos"]
             is_predicted = True
             tracking_confidence = 0.1
 
@@ -372,8 +374,8 @@ class HandTracker:
         if self.pending_interpolation is None:
             return
 
-        start_pos = self.pending_interpolation['start_pos']
-        start_frame = self.pending_interpolation['start_frame']
+        start_pos = self.pending_interpolation["start_pos"]
+        start_frame = self.pending_interpolation["start_frame"]
         end_frame = len(self.position_history)
         num_frames = end_frame - start_frame
 
@@ -386,18 +388,20 @@ class HandTracker:
 
         # Create interpolator
         try:
-            interpolator_x = interp1d(t, positions[:, 0], kind='cubic', fill_value='extrapolate')
-            interpolator_y = interp1d(t, positions[:, 1], kind='cubic', fill_value='extrapolate')
+            interpolator_x = interp1d(t, positions[:, 0], kind="cubic", fill_value="extrapolate")
+            interpolator_y = interp1d(t, positions[:, 1], kind="cubic", fill_value="extrapolate")
 
             # Fill in interpolated positions
             t_interp = np.arange(1, num_frames)
             for i, t_val in enumerate(t_interp):
                 frame_idx = start_frame + i
                 if frame_idx < len(self.position_history):
-                    self.position_history[frame_idx] = np.array([
-                        interpolator_x(t_val),
-                        interpolator_y(t_val),
-                    ])
+                    self.position_history[frame_idx] = np.array(
+                        [
+                            interpolator_x(t_val),
+                            interpolator_y(t_val),
+                        ]
+                    )
         except:
             # Fallback to linear interpolation
             for i in range(1, num_frames):
@@ -409,7 +413,7 @@ class HandTracker:
 
     def _track_hybrid(
         self,
-        observation: Optional[np.ndarray],
+        observation: np.ndarray | None,
         confidence: float,
         occlusion_state: OcclusionState,
     ) -> TrackingResult:
@@ -478,10 +482,10 @@ class HandTracker:
         # Define expected velocity directions for each phase
         # (in image coordinates: +x = right, +y = down)
         phase_velocity_hints = {
-            StrokePhase.ENTRY: (0, 1),      # Moving down (entering water)
-            StrokePhase.CATCH: (-0.5, 1),   # Down and slightly back
-            StrokePhase.PULL: (-1, 0.5),    # Backward and down
-            StrokePhase.PUSH: (-1, -0.5),   # Backward and up
+            StrokePhase.ENTRY: (0, 1),  # Moving down (entering water)
+            StrokePhase.CATCH: (-0.5, 1),  # Down and slightly back
+            StrokePhase.PULL: (-1, 0.5),  # Backward and down
+            StrokePhase.PUSH: (-1, -0.5),  # Backward and up
             StrokePhase.RECOVERY: (1, -1),  # Forward and up
         }
 
@@ -513,7 +517,7 @@ class HandTracker:
             return np.array([])
         return np.array(self.position_history)
 
-    def get_statistics(self) -> Dict[str, any]:
+    def get_statistics(self) -> dict[str, Any]:
         """Get tracking statistics.
 
         Returns:
@@ -522,18 +526,18 @@ class HandTracker:
         stats = self.occlusion_detector.get_statistics()
 
         # Add tracking-specific stats
-        stats['tracking_method'] = self.method.value
-        stats['total_tracked_frames'] = len(self.position_history)
+        stats["tracking_method"] = self.method.value
+        stats["total_tracked_frames"] = len(self.position_history)
 
         # Calculate percentage of predicted frames
         predicted_frames = sum(
-            1 for state in self.occlusion_history
+            1
+            for state in self.occlusion_history
             if state in [OcclusionState.FULLY_OCCLUDED, OcclusionState.PARTIALLY_OCCLUDED]
         )
-        stats['predicted_frames'] = predicted_frames
-        stats['prediction_percentage'] = (
-            predicted_frames / len(self.position_history) * 100
-            if self.position_history else 0.0
+        stats["predicted_frames"] = predicted_frames
+        stats["prediction_percentage"] = (
+            predicted_frames / len(self.position_history) * 100 if self.position_history else 0.0
         )
 
         return stats

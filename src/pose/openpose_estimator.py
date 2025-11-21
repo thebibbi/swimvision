@@ -7,19 +7,18 @@ Install: https://github.com/CMU-Perceptual-Computing-Lab/openpose
 Python bindings: pip install openpose-python (or build from source)
 """
 
-from typing import Dict, List, Optional, Tuple
-import numpy as np
-import cv2
 from pathlib import Path
+
+import numpy as np
 
 from src.pose.base_estimator import (
     BasePoseEstimator,
     KeypointFormat,
-    PoseModel,
 )
 
 try:
     import pyopenpose as op
+
     OPENPOSE_AVAILABLE = True
 except ImportError:
     OPENPOSE_AVAILABLE = False
@@ -30,7 +29,7 @@ class OpenPoseEstimator(BasePoseEstimator):
 
     def __init__(
         self,
-        model_folder: Optional[str] = None,
+        model_folder: str | None = None,
         net_resolution: str = "-1x368",  # Width x Height (-1 for automatic)
         face: bool = False,
         hand: bool = False,
@@ -98,7 +97,7 @@ class OpenPoseEstimator(BasePoseEstimator):
         self,
         image: np.ndarray,
         return_image: bool = True,
-    ) -> Tuple[Optional[List[Dict]], Optional[np.ndarray]]:
+    ) -> tuple[list[dict] | None, np.ndarray | None]:
         """Estimate pose using OpenPose.
 
         Args:
@@ -141,8 +140,8 @@ class OpenPoseEstimator(BasePoseEstimator):
         self,
         keypoints: np.ndarray,
         person_id: int,
-        image_shape: Tuple[int, int, int],
-    ) -> Dict:
+        image_shape: tuple[int, int, int],
+    ) -> dict:
         """Format OpenPose output to standard format.
 
         Args:
@@ -160,15 +159,25 @@ class OpenPoseEstimator(BasePoseEstimator):
 
         # OpenPose keypoint names (COCO-18 format)
         keypoint_names = [
-            'nose',
-            'neck',
-            'right_shoulder', 'right_elbow', 'right_wrist',
-            'left_shoulder', 'left_elbow', 'left_wrist',
-            'mid_hip',
-            'right_hip', 'right_knee', 'right_ankle',
-            'left_hip', 'left_knee', 'left_ankle',
-            'right_eye', 'left_eye',
-            'right_ear', 'left_ear',
+            "nose",
+            "neck",
+            "right_shoulder",
+            "right_elbow",
+            "right_wrist",
+            "left_shoulder",
+            "left_elbow",
+            "left_wrist",
+            "mid_hip",
+            "right_hip",
+            "right_knee",
+            "right_ankle",
+            "left_hip",
+            "left_knee",
+            "left_ankle",
+            "right_eye",
+            "left_eye",
+            "right_ear",
+            "left_ear",
         ][:num_keypoints]
 
         # Calculate bounding box
@@ -176,30 +185,42 @@ class OpenPoseEstimator(BasePoseEstimator):
 
         # Extract hand and face keypoints if enabled
         metadata = {
-            'model': 'openpose',
-            'format': 'coco18',
+            "model": "openpose",
+            "format": "coco18",
         }
 
-        if self.hand and hasattr(self.datum, 'handKeypoints') and self.datum.handKeypoints is not None:
-            metadata['hand_keypoints'] = {
-                'left': self.datum.handKeypoints[0][person_id] if len(self.datum.handKeypoints[0]) > person_id else None,
-                'right': self.datum.handKeypoints[1][person_id] if len(self.datum.handKeypoints[1]) > person_id else None,
+        if (
+            self.hand
+            and hasattr(self.datum, "handKeypoints")
+            and self.datum.handKeypoints is not None
+        ):
+            metadata["hand_keypoints"] = {
+                "left": self.datum.handKeypoints[0][person_id]
+                if len(self.datum.handKeypoints[0]) > person_id
+                else None,
+                "right": self.datum.handKeypoints[1][person_id]
+                if len(self.datum.handKeypoints[1]) > person_id
+                else None,
             }
 
-        if self.face and hasattr(self.datum, 'faceKeypoints') and self.datum.faceKeypoints is not None:
+        if (
+            self.face
+            and hasattr(self.datum, "faceKeypoints")
+            and self.datum.faceKeypoints is not None
+        ):
             if len(self.datum.faceKeypoints) > person_id:
-                metadata['face_keypoints'] = self.datum.faceKeypoints[person_id]
+                metadata["face_keypoints"] = self.datum.faceKeypoints[person_id]
 
         return {
-            'keypoints': keypoints,
-            'keypoint_names': keypoint_names,
-            'bbox': bbox,
-            'person_id': person_id,
-            'format': self.get_keypoint_format(),
-            'metadata': metadata,
+            "keypoints": keypoints,
+            "keypoint_names": keypoint_names,
+            "bbox": bbox,
+            "person_id": person_id,
+            "format": self.get_keypoint_format(),
+            "metadata": metadata,
         }
 
-    def _has_sufficient_confidence(self, pose_data: Dict) -> bool:
+    def _has_sufficient_confidence(self, pose_data: dict) -> bool:
         """Check if pose has sufficient confidence.
 
         Args:
@@ -208,14 +229,14 @@ class OpenPoseEstimator(BasePoseEstimator):
         Returns:
             True if pose meets confidence threshold.
         """
-        keypoints = pose_data['keypoints']
+        keypoints = pose_data["keypoints"]
         confidences = keypoints[:, 2]
 
         # Require at least 50% of keypoints above threshold
         valid_keypoints = np.sum(confidences > self.confidence)
         return valid_keypoints >= len(keypoints) * 0.5
 
-    def _calculate_bbox(self, keypoints: np.ndarray) -> List[float]:
+    def _calculate_bbox(self, keypoints: np.ndarray) -> list[float]:
         """Calculate bounding box from keypoints.
 
         Args:
@@ -263,7 +284,7 @@ class OpenPoseEstimator(BasePoseEstimator):
         """OpenPose supports multi-person detection."""
         return True
 
-    def convert_to_coco17(self, pose_data: Dict) -> Dict:
+    def convert_to_coco17(self, pose_data: dict) -> dict:
         """Convert OpenPose COCO-18 to COCO-17 format.
 
         OpenPose COCO-18 includes 'neck' and 'mid_hip' which aren't in COCO-17.
@@ -275,7 +296,7 @@ class OpenPoseEstimator(BasePoseEstimator):
         Returns:
             Pose data in COCO-17 format.
         """
-        keypoints_18 = pose_data['keypoints']
+        keypoints_18 = pose_data["keypoints"]
 
         # Mapping from OpenPose COCO-18 to COCO-17
         # OpenPose: [nose, neck, r_shoulder, r_elbow, r_wrist, l_shoulder, l_elbow, l_wrist,
@@ -284,19 +305,19 @@ class OpenPoseEstimator(BasePoseEstimator):
         #           l_wrist, r_wrist, l_hip, r_hip, l_knee, r_knee, l_ankle, r_ankle]
 
         coco17_indices = [
-            0,   # nose
+            0,  # nose
             16,  # left_eye
             15,  # right_eye
             18,  # left_ear (if available, else 17)
             17,  # right_ear (if available, else 16)
-            5,   # left_shoulder
-            2,   # right_shoulder
-            6,   # left_elbow
-            3,   # right_elbow
-            7,   # left_wrist
-            4,   # right_wrist
+            5,  # left_shoulder
+            2,  # right_shoulder
+            6,  # left_elbow
+            3,  # right_elbow
+            7,  # left_wrist
+            4,  # right_wrist
             12,  # left_hip
-            9,   # right_hip
+            9,  # right_hip
             13,  # left_knee
             10,  # right_knee
             14,  # left_ankle
@@ -311,25 +332,33 @@ class OpenPoseEstimator(BasePoseEstimator):
 
         # COCO-17 keypoint names
         coco17_names = [
-            'nose',
-            'left_eye', 'right_eye',
-            'left_ear', 'right_ear',
-            'left_shoulder', 'right_shoulder',
-            'left_elbow', 'right_elbow',
-            'left_wrist', 'right_wrist',
-            'left_hip', 'right_hip',
-            'left_knee', 'right_knee',
-            'left_ankle', 'right_ankle',
+            "nose",
+            "left_eye",
+            "right_eye",
+            "left_ear",
+            "right_ear",
+            "left_shoulder",
+            "right_shoulder",
+            "left_elbow",
+            "right_elbow",
+            "left_wrist",
+            "right_wrist",
+            "left_hip",
+            "right_hip",
+            "left_knee",
+            "right_knee",
+            "left_ankle",
+            "right_ankle",
         ]
 
         return {
             **pose_data,
-            'keypoints': coco17_keypoints,
-            'keypoint_names': coco17_names,
-            'format': KeypointFormat.COCO_17,
+            "keypoints": coco17_keypoints,
+            "keypoint_names": coco17_names,
+            "format": KeypointFormat.COCO_17,
         }
 
-    def get_hand_keypoints(self, pose_data: Dict) -> Dict[str, Optional[np.ndarray]]:
+    def get_hand_keypoints(self, pose_data: dict) -> dict[str, np.ndarray | None]:
         """Get hand keypoints if hand detection was enabled.
 
         Args:
@@ -338,10 +367,10 @@ class OpenPoseEstimator(BasePoseEstimator):
         Returns:
             Dictionary with 'left' and 'right' hand keypoints.
         """
-        metadata = pose_data.get('metadata', {})
-        return metadata.get('hand_keypoints', {'left': None, 'right': None})
+        metadata = pose_data.get("metadata", {})
+        return metadata.get("hand_keypoints", {"left": None, "right": None})
 
-    def get_face_keypoints(self, pose_data: Dict) -> Optional[np.ndarray]:
+    def get_face_keypoints(self, pose_data: dict) -> np.ndarray | None:
         """Get face keypoints if face detection was enabled.
 
         Args:
@@ -350,8 +379,8 @@ class OpenPoseEstimator(BasePoseEstimator):
         Returns:
             Face keypoints or None.
         """
-        metadata = pose_data.get('metadata', {})
-        return metadata.get('face_keypoints')
+        metadata = pose_data.get("metadata", {})
+        return metadata.get("face_keypoints")
 
     def _get_default_model_folder(self) -> str:
         """Get default OpenPose model folder.
@@ -375,5 +404,5 @@ class OpenPoseEstimator(BasePoseEstimator):
 
     def __del__(self):
         """Cleanup OpenPose resources."""
-        if hasattr(self, 'opWrapper'):
+        if hasattr(self, "opWrapper"):
             self.opWrapper.stop()

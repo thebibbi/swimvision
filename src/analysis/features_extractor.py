@@ -9,19 +9,17 @@ This module extracts comprehensive biomechanical features from swimming pose seq
 - Injury risk features (shoulder angles, asymmetry, workload)
 """
 
-from typing import Dict, List, Tuple, Optional
 import numpy as np
 from scipy.signal import find_peaks
 from scipy.spatial.distance import euclidean
 
 from src.utils.smoothing import (
-    smooth_trajectory_kalman,
-    calculate_velocity,
     calculate_acceleration,
     calculate_speed,
+    calculate_velocity,
     smooth_signal_savgol,
+    smooth_trajectory_kalman,
 )
-from src.utils.geometry import calculate_angle
 
 
 class FeaturesExtractor:
@@ -38,11 +36,11 @@ class FeaturesExtractor:
 
     def extract_stroke_features(
         self,
-        pose_sequence: List[dict],
-        left_hand_path: Optional[np.ndarray] = None,
-        right_hand_path: Optional[np.ndarray] = None,
-        angles_over_time: Optional[Dict[str, np.ndarray]] = None,
-    ) -> Dict[str, float]:
+        pose_sequence: list[dict],
+        left_hand_path: np.ndarray | None = None,
+        right_hand_path: np.ndarray | None = None,
+        angles_over_time: dict[str, np.ndarray] | None = None,
+    ) -> dict[str, float]:
         """Extract comprehensive stroke features.
 
         Args:
@@ -57,22 +55,16 @@ class FeaturesExtractor:
         features = {}
 
         # Temporal features
-        temporal = self._extract_temporal_features(
-            left_hand_path, right_hand_path
-        )
+        temporal = self._extract_temporal_features(left_hand_path, right_hand_path)
         features.update(temporal)
 
         # Kinematic features
         if left_hand_path is not None and len(left_hand_path) > 0:
-            kinematic_left = self._extract_kinematic_features(
-                left_hand_path, prefix="left_hand"
-            )
+            kinematic_left = self._extract_kinematic_features(left_hand_path, prefix="left_hand")
             features.update(kinematic_left)
 
         if right_hand_path is not None and len(right_hand_path) > 0:
-            kinematic_right = self._extract_kinematic_features(
-                right_hand_path, prefix="right_hand"
-            )
+            kinematic_right = self._extract_kinematic_features(right_hand_path, prefix="right_hand")
             features.update(kinematic_right)
 
         # Angular features
@@ -82,9 +74,7 @@ class FeaturesExtractor:
 
         # Spatial features
         if left_hand_path is not None and right_hand_path is not None:
-            spatial = self._extract_spatial_features(
-                left_hand_path, right_hand_path
-            )
+            spatial = self._extract_spatial_features(left_hand_path, right_hand_path)
             features.update(spatial)
 
         # Symmetry features
@@ -98,9 +88,9 @@ class FeaturesExtractor:
 
     def _extract_temporal_features(
         self,
-        left_hand_path: Optional[np.ndarray],
-        right_hand_path: Optional[np.ndarray],
-    ) -> Dict[str, float]:
+        left_hand_path: np.ndarray | None,
+        right_hand_path: np.ndarray | None,
+    ) -> dict[str, float]:
         """Extract temporal features (stroke rate, cycle time).
 
         Args:
@@ -149,7 +139,9 @@ class FeaturesExtractor:
 
             # Tempo (ratio of fastest to slowest stroke)
             if len(cycle_times) > 1:
-                tempo_consistency = np.std(cycle_times) / np.mean(cycle_times) if np.mean(cycle_times) > 0 else 0.0
+                tempo_consistency = (
+                    np.std(cycle_times) / np.mean(cycle_times) if np.mean(cycle_times) > 0 else 0.0
+                )
                 features["tempo"] = 1.0 - min(tempo_consistency, 1.0)  # 1.0 = perfect consistency
             else:
                 features["tempo"] = 1.0
@@ -168,7 +160,7 @@ class FeaturesExtractor:
         self,
         trajectory: np.ndarray,
         prefix: str = "hand",
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Extract kinematic features (velocity, acceleration, speed).
 
         Args:
@@ -225,8 +217,8 @@ class FeaturesExtractor:
 
     def _extract_angular_features(
         self,
-        angles_over_time: Dict[str, np.ndarray],
-    ) -> Dict[str, float]:
+        angles_over_time: dict[str, np.ndarray],
+    ) -> dict[str, float]:
         """Extract angular features from joint angles.
 
         Args:
@@ -263,7 +255,7 @@ class FeaturesExtractor:
         self,
         left_hand_path: np.ndarray,
         right_hand_path: np.ndarray,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Extract spatial features (hand positions, body alignment).
 
         Args:
@@ -278,8 +270,7 @@ class FeaturesExtractor:
         # Hand separation (average distance between hands)
         if len(left_hand_path) == len(right_hand_path):
             separations = [
-                euclidean(left_hand_path[i], right_hand_path[i])
-                for i in range(len(left_hand_path))
+                euclidean(left_hand_path[i], right_hand_path[i]) for i in range(len(left_hand_path))
             ]
             features["hand_separation_mean"] = np.mean(separations)
             features["hand_separation_std"] = np.std(separations)
@@ -288,12 +279,20 @@ class FeaturesExtractor:
 
         # Hand path width (lateral spread)
         if len(left_hand_path) > 0:
-            features["left_hand_width"] = np.max(left_hand_path[:, 0]) - np.min(left_hand_path[:, 0])
-            features["left_hand_depth"] = np.max(left_hand_path[:, 1]) - np.min(left_hand_path[:, 1])
+            features["left_hand_width"] = np.max(left_hand_path[:, 0]) - np.min(
+                left_hand_path[:, 0]
+            )
+            features["left_hand_depth"] = np.max(left_hand_path[:, 1]) - np.min(
+                left_hand_path[:, 1]
+            )
 
         if len(right_hand_path) > 0:
-            features["right_hand_width"] = np.max(right_hand_path[:, 0]) - np.min(right_hand_path[:, 0])
-            features["right_hand_depth"] = np.max(right_hand_path[:, 1]) - np.min(right_hand_path[:, 1])
+            features["right_hand_width"] = np.max(right_hand_path[:, 0]) - np.min(
+                right_hand_path[:, 0]
+            )
+            features["right_hand_depth"] = np.max(right_hand_path[:, 1]) - np.min(
+                right_hand_path[:, 1]
+            )
 
         return features
 
@@ -301,8 +300,8 @@ class FeaturesExtractor:
         self,
         left_hand_path: np.ndarray,
         right_hand_path: np.ndarray,
-        angles_over_time: Optional[Dict[str, np.ndarray]] = None,
-    ) -> Dict[str, float]:
+        angles_over_time: dict[str, np.ndarray] | None = None,
+    ) -> dict[str, float]:
         """Extract symmetry features (left/right balance).
 
         Args:
@@ -364,11 +363,11 @@ class FeaturesExtractor:
 
     def extract_injury_risk_features(
         self,
-        pose_sequence: List[dict],
-        angles_over_time: Dict[str, np.ndarray],
-        left_hand_path: Optional[np.ndarray] = None,
-        right_hand_path: Optional[np.ndarray] = None,
-    ) -> Dict[str, float]:
+        pose_sequence: list[dict],
+        angles_over_time: dict[str, np.ndarray],
+        left_hand_path: np.ndarray | None = None,
+        right_hand_path: np.ndarray | None = None,
+    ) -> dict[str, float]:
         """Extract features specific to injury risk prediction.
 
         Args:
@@ -390,7 +389,9 @@ class FeaturesExtractor:
             if len(valid_angles) > 0:
                 # Count frames with extreme shoulder angles (>170° or <30°)
                 extreme_angles = np.sum((valid_angles > 170) | (valid_angles < 30))
-                features["left_shoulder_extreme_angle_pct"] = (extreme_angles / len(valid_angles)) * 100
+                features["left_shoulder_extreme_angle_pct"] = (
+                    extreme_angles / len(valid_angles)
+                ) * 100
 
         if "right_shoulder" in angles_over_time:
             right_shoulder = angles_over_time["right_shoulder"]
@@ -398,7 +399,9 @@ class FeaturesExtractor:
 
             if len(valid_angles) > 0:
                 extreme_angles = np.sum((valid_angles > 170) | (valid_angles < 30))
-                features["right_shoulder_extreme_angle_pct"] = (extreme_angles / len(valid_angles)) * 100
+                features["right_shoulder_extreme_angle_pct"] = (
+                    extreme_angles / len(valid_angles)
+                ) * 100
 
         # Elbow drop (elbow angle too small during pull)
         if "left_elbow" in angles_over_time:
@@ -425,7 +428,9 @@ class FeaturesExtractor:
 
         # High asymmetry is a risk factor
         if "path_length_asymmetry" in symmetry_features:
-            features["asymmetry_risk_score"] = min(symmetry_features["path_length_asymmetry"] / 10.0, 10.0)
+            features["asymmetry_risk_score"] = min(
+                symmetry_features["path_length_asymmetry"] / 10.0, 10.0
+            )
 
         # Workload (total path length - proxy for training volume)
         if left_hand_path is not None and len(left_hand_path) > 1:
@@ -444,11 +449,11 @@ class FeaturesExtractor:
 
     def extract_all_features(
         self,
-        pose_sequence: List[dict],
-        left_hand_path: Optional[np.ndarray] = None,
-        right_hand_path: Optional[np.ndarray] = None,
-        angles_over_time: Optional[Dict[str, np.ndarray]] = None,
-    ) -> Dict[str, float]:
+        pose_sequence: list[dict],
+        left_hand_path: np.ndarray | None = None,
+        right_hand_path: np.ndarray | None = None,
+        angles_over_time: dict[str, np.ndarray] | None = None,
+    ) -> dict[str, float]:
         """Extract all features (stroke + injury risk).
 
         Args:
@@ -474,7 +479,7 @@ class FeaturesExtractor:
         return all_features
 
 
-def format_features_table(features: Dict[str, float]) -> str:
+def format_features_table(features: dict[str, float]) -> str:
     """Format features as a readable table.
 
     Args:
@@ -491,13 +496,23 @@ def format_features_table(features: Dict[str, float]) -> str:
     # Group features by category
     categories = {
         "Temporal": ["stroke_rate", "stroke_cycle_time", "tempo", "num_strokes", "cycle_time_std"],
-        "Kinematic (Left Hand)": [k for k in features if k.startswith("left_hand") and "velocity" in k or "acceleration" in k or "path" in k],
-        "Kinematic (Right Hand)": [k for k in features if k.startswith("right_hand") and "velocity" in k or "acceleration" in k or "path" in k],
-        "Angular (Elbows)": [k for k in features if "elbow" in k and not "drop" in k],
-        "Angular (Shoulders)": [k for k in features if "shoulder" in k and not "extreme" in k],
+        "Kinematic (Left Hand)": [
+            k
+            for k in features
+            if k.startswith("left_hand") and "velocity" in k or "acceleration" in k or "path" in k
+        ],
+        "Kinematic (Right Hand)": [
+            k
+            for k in features
+            if k.startswith("right_hand") and "velocity" in k or "acceleration" in k or "path" in k
+        ],
+        "Angular (Elbows)": [k for k in features if "elbow" in k and "drop" not in k],
+        "Angular (Shoulders)": [k for k in features if "shoulder" in k and "extreme" not in k],
         "Spatial": [k for k in features if "hand_separation" in k or "width" in k or "depth" in k],
         "Symmetry": [k for k in features if "asymmetry" in k],
-        "Injury Risk": [k for k in features if "extreme" in k or "drop" in k or "risk" in k or "workload" in k],
+        "Injury Risk": [
+            k for k in features if "extreme" in k or "drop" in k or "risk" in k or "workload" in k
+        ],
     }
 
     for category, feature_keys in categories.items():

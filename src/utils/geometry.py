@@ -1,15 +1,12 @@
 """Geometry utilities for pose analysis."""
 
-import math
-from typing import List, Optional, Tuple
-
 import numpy as np
 
 
 def calculate_angle(
-    point1: Tuple[float, float],
-    point2: Tuple[float, float],
-    point3: Tuple[float, float],
+    point1: tuple[float, float],
+    point2: tuple[float, float],
+    point3: tuple[float, float],
 ) -> float:
     """Calculate angle formed by three points (in degrees).
 
@@ -43,9 +40,9 @@ def calculate_angle(
 
 
 def calculate_angle_3d(
-    point1: Tuple[float, float, float],
-    point2: Tuple[float, float, float],
-    point3: Tuple[float, float, float],
+    point1: tuple[float, float, float],
+    point2: tuple[float, float, float],
+    point3: tuple[float, float, float],
 ) -> float:
     """Calculate 3D angle formed by three points (in degrees).
 
@@ -69,9 +66,7 @@ def calculate_angle_3d(
     return float(angle_deg)
 
 
-def euclidean_distance(
-    point1: Tuple[float, float], point2: Tuple[float, float]
-) -> float:
+def euclidean_distance(point1: tuple[float, float], point2: tuple[float, float]) -> float:
     """Calculate Euclidean distance between two 2D points.
 
     Args:
@@ -85,7 +80,7 @@ def euclidean_distance(
 
 
 def euclidean_distance_3d(
-    point1: Tuple[float, float, float], point2: Tuple[float, float, float]
+    point1: tuple[float, float, float], point2: tuple[float, float, float]
 ) -> float:
     """Calculate Euclidean distance between two 3D points.
 
@@ -105,7 +100,7 @@ def euclidean_distance_3d(
     )
 
 
-def midpoint(point1: Tuple[float, float], point2: Tuple[float, float]) -> Tuple[float, float]:
+def midpoint(point1: tuple[float, float], point2: tuple[float, float]) -> tuple[float, float]:
     """Calculate midpoint between two 2D points.
 
     Args:
@@ -133,9 +128,7 @@ def normalize_vector(vector: np.ndarray) -> np.ndarray:
     return vector / norm
 
 
-def calculate_velocity(
-    positions: List[Tuple[float, float]], fps: float
-) -> List[float]:
+def calculate_velocity(positions: list[tuple[float, float]], fps: float) -> list[float]:
     """Calculate velocity from position sequence.
 
     Args:
@@ -162,7 +155,7 @@ def calculate_velocity(
     return velocities
 
 
-def calculate_acceleration(velocities: List[float], fps: float) -> List[float]:
+def calculate_acceleration(velocities: list[float], fps: float) -> list[float]:
     """Calculate acceleration from velocity sequence.
 
     Args:
@@ -189,10 +182,10 @@ def calculate_acceleration(velocities: List[float], fps: float) -> List[float]:
 
 
 def project_point_to_line(
-    point: Tuple[float, float],
-    line_point1: Tuple[float, float],
-    line_point2: Tuple[float, float],
-) -> Tuple[float, float]:
+    point: tuple[float, float],
+    line_point1: tuple[float, float],
+    line_point2: tuple[float, float],
+) -> tuple[float, float]:
     """Project a point onto a line defined by two points.
 
     Args:
@@ -221,9 +214,9 @@ def project_point_to_line(
 
 
 def perpendicular_distance_to_line(
-    point: Tuple[float, float],
-    line_point1: Tuple[float, float],
-    line_point2: Tuple[float, float],
+    point: tuple[float, float],
+    line_point1: tuple[float, float],
+    line_point2: tuple[float, float],
 ) -> float:
     """Calculate perpendicular distance from point to line.
 
@@ -240,10 +233,10 @@ def perpendicular_distance_to_line(
 
 
 def calculate_body_roll(
-    left_shoulder: Tuple[float, float],
-    right_shoulder: Tuple[float, float],
-    left_hip: Tuple[float, float],
-    right_hip: Tuple[float, float],
+    left_shoulder: tuple[float, float],
+    right_shoulder: tuple[float, float],
+    left_hip: tuple[float, float],
+    right_hip: tuple[float, float],
 ) -> float:
     """Calculate body roll angle from shoulder and hip positions.
 
@@ -284,7 +277,7 @@ def calculate_body_roll(
     return float(roll_deg)
 
 
-def calculate_trajectory_length(trajectory: List[Tuple[float, float]]) -> float:
+def calculate_trajectory_length(trajectory: list[tuple[float, float]]) -> float:
     """Calculate total path length of a trajectory.
 
     Args:
@@ -304,8 +297,8 @@ def calculate_trajectory_length(trajectory: List[Tuple[float, float]]) -> float:
 
 
 def smooth_trajectory(
-    trajectory: List[Tuple[float, float]], window_size: int = 5
-) -> List[Tuple[float, float]]:
+    trajectory: list[tuple[float, float]], window_size: int = 5
+) -> list[tuple[float, float]]:
     """Smooth a trajectory using moving average.
 
     Args:

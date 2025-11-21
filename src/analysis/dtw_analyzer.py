@@ -1,10 +1,7 @@
 """Dynamic Time Warping (DTW) analysis for stroke comparison."""
 
-from typing import Dict, List, Optional, Tuple
-
 import numpy as np
-from dtaidistance import dtw
-from dtaidistance import dtw_ndim
+from dtaidistance import dtw, dtw_ndim
 
 from src.utils.config import load_analysis_config
 
@@ -14,7 +11,7 @@ class DTWAnalyzer:
 
     def __init__(
         self,
-        window: Optional[int] = None,
+        window: int | None = None,
         use_c: bool = True,
     ):
         """Initialize DTW analyzer.
@@ -116,7 +113,7 @@ class DTWAnalyzer:
         self,
         sequence1: np.ndarray,
         sequence2: np.ndarray,
-    ) -> List[Tuple[int, int]]:
+    ) -> list[tuple[int, int]]:
         """Get the optimal warping path between two sequences.
 
         Args:
@@ -148,10 +145,10 @@ class DTWAnalyzer:
 
     def compare_strokes(
         self,
-        stroke1: Dict[str, np.ndarray],
-        stroke2: Dict[str, np.ndarray],
-        features: Optional[List[str]] = None,
-    ) -> Dict[str, float]:
+        stroke1: dict[str, np.ndarray],
+        stroke2: dict[str, np.ndarray],
+        features: list[str] | None = None,
+    ) -> dict[str, float]:
         """Compare two swimming strokes using DTW.
 
         Args:
@@ -179,7 +176,7 @@ class DTWAnalyzer:
 
     def compute_barycenter(
         self,
-        sequences: List[np.ndarray],
+        sequences: list[np.ndarray],
         max_iter: int = 10,
     ) -> np.ndarray:
         """Compute DTW barycenter averaging (DBA) for a set of sequences.
@@ -194,9 +191,7 @@ class DTWAnalyzer:
             Barycenter sequence.
         """
         # Ensure all sequences are 2D
-        sequences = [
-            seq.reshape(-1, 1) if seq.ndim == 1 else seq for seq in sequences
-        ]
+        sequences = [seq.reshape(-1, 1) if seq.ndim == 1 else seq for seq in sequences]
 
         # Use the first sequence as initial barycenter
         barycenter = sequences[0].copy()
@@ -255,7 +250,7 @@ class DTWAnalyzer:
         self,
         sequence1: np.ndarray,
         sequence2: np.ndarray,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray]:
         """Align two sequences using DTW warping path.
 
         Args:

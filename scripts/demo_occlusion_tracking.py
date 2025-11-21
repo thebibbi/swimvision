@@ -14,13 +14,12 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.patches import Circle, Rectangle
+import numpy as np
 
-from src.tracking.occlusion_detector import OcclusionDetector, OcclusionState
-from src.tracking.hand_tracker import HandTracker, TrackingMethod
 from src.analysis.stroke_phases import StrokePhase
+from src.tracking.hand_tracker import HandTracker, TrackingMethod
+from src.tracking.occlusion_detector import OcclusionDetector, OcclusionState
 
 
 def generate_swimming_stroke_data(num_frames=100, fps=30.0):
@@ -97,13 +96,13 @@ def demo_occlusion_detection():
 
     # Detect occlusion for each frame
     states = []
-    for conf, phase in zip(data["confidences"], data["phases"]):
+    for conf, phase in zip(data["confidences"], data["phases"], strict=False):
         state = detector.detect(conf, phase.value)
         states.append(state)
 
     # Print statistics
     stats = detector.get_statistics()
-    print(f"\nOcclusion Statistics:")
+    print("\nOcclusion Statistics:")
     print(f"  Total frames: {stats['total_frames']}")
     print(f"  Occluded frames: {stats['total_occluded_frames']}")
     print(f"  Occlusion percentage: {stats['occlusion_percentage']:.1f}%")
@@ -114,31 +113,31 @@ def demo_occlusion_detection():
 
     # Plot 1: Confidence and phases
     frames = np.arange(len(data["confidences"]))
-    ax1.plot(frames, data["confidences"], 'b-', linewidth=2, label='Confidence')
-    ax1.axhline(y=0.5, color='g', linestyle='--', alpha=0.5, label='High threshold')
-    ax1.axhline(y=0.3, color='r', linestyle='--', alpha=0.5, label='Low threshold')
+    ax1.plot(frames, data["confidences"], "b-", linewidth=2, label="Confidence")
+    ax1.axhline(y=0.5, color="g", linestyle="--", alpha=0.5, label="High threshold")
+    ax1.axhline(y=0.3, color="r", linestyle="--", alpha=0.5, label="Low threshold")
 
     # Color background by phase
     phase_colors = {
-        StrokePhase.ENTRY: 'lightblue',
-        StrokePhase.CATCH: 'lightyellow',
-        StrokePhase.PULL: 'lightcoral',
-        StrokePhase.PUSH: 'lightcoral',
-        StrokePhase.RECOVERY: 'lightgreen',
+        StrokePhase.ENTRY: "lightblue",
+        StrokePhase.CATCH: "lightyellow",
+        StrokePhase.PULL: "lightcoral",
+        StrokePhase.PUSH: "lightcoral",
+        StrokePhase.RECOVERY: "lightgreen",
     }
 
     current_phase = data["phases"][0]
     phase_start = 0
     for i, phase in enumerate(data["phases"] + [None]):
         if phase != current_phase or i == len(data["phases"]):
-            ax1.axvspan(phase_start, i, alpha=0.2, color=phase_colors.get(current_phase, 'white'))
+            ax1.axvspan(phase_start, i, alpha=0.2, color=phase_colors.get(current_phase, "white"))
             if i < len(data["phases"]):
                 current_phase = phase
                 phase_start = i
 
-    ax1.set_title('Confidence and Stroke Phases', fontsize=14, fontweight='bold')
-    ax1.set_xlabel('Frame')
-    ax1.set_ylabel('Confidence')
+    ax1.set_title("Confidence and Stroke Phases", fontsize=14, fontweight="bold")
+    ax1.set_xlabel("Frame")
+    ax1.set_ylabel("Confidence")
     ax1.legend()
     ax1.grid(True, alpha=0.3)
 
@@ -154,28 +153,28 @@ def demo_occlusion_detection():
     colors = []
     for s in states:
         if s == OcclusionState.VISIBLE:
-            colors.append('green')
+            colors.append("green")
         elif s == OcclusionState.FULLY_OCCLUDED:
-            colors.append('red')
+            colors.append("red")
         elif s == OcclusionState.PARTIALLY_OCCLUDED:
-            colors.append('orange')
+            colors.append("orange")
         else:
-            colors.append('yellow')
+            colors.append("yellow")
 
     ax2.bar(frames, state_nums, color=colors, alpha=0.7)
-    ax2.set_title('Detected Occlusion States', fontsize=14, fontweight='bold')
-    ax2.set_xlabel('Frame')
-    ax2.set_ylabel('State')
+    ax2.set_title("Detected Occlusion States", fontsize=14, fontweight="bold")
+    ax2.set_xlabel("Frame")
+    ax2.set_ylabel("State")
     ax2.set_yticks([0, 0.5, 0.75, 1.0])
-    ax2.set_yticklabels(['Occluded', 'Partial', 'Transition', 'Visible'])
-    ax2.grid(True, alpha=0.3, axis='y')
+    ax2.set_yticklabels(["Occluded", "Partial", "Transition", "Visible"])
+    ax2.grid(True, alpha=0.3, axis="y")
 
     plt.tight_layout()
 
     # Save figure
     output_dir = Path("data/exports")
     output_dir.mkdir(parents=True, exist_ok=True)
-    plt.savefig(output_dir / "occlusion_detection_demo.png", dpi=150, bbox_inches='tight')
+    plt.savefig(output_dir / "occlusion_detection_demo.png", dpi=150, bbox_inches="tight")
     print(f"\n✅ Visualization saved to: {output_dir / 'occlusion_detection_demo.png'}")
 
     plt.close()
@@ -191,10 +190,10 @@ def demo_tracking_methods():
 
     # Test different methods
     methods = {
-        'Kalman Only': TrackingMethod.KALMAN_ONLY,
-        'Kalman Predict': TrackingMethod.KALMAN_PREDICT,
-        'Phase-Aware': TrackingMethod.PHASE_AWARE,
-        'Hybrid': TrackingMethod.HYBRID,
+        "Kalman Only": TrackingMethod.KALMAN_ONLY,
+        "Kalman Predict": TrackingMethod.KALMAN_PREDICT,
+        "Phase-Aware": TrackingMethod.PHASE_AWARE,
+        "Hybrid": TrackingMethod.HYBRID,
     }
 
     results = {}
@@ -204,13 +203,15 @@ def demo_tracking_methods():
         tracker = HandTracker(method=method, fps=data["fps"])
 
         trajectories = []
-        for obs, conf, phase in zip(data["observations"], data["confidences"], data["phases"]):
+        for obs, conf, phase in zip(
+            data["observations"], data["confidences"], data["phases"], strict=False
+        ):
             result = tracker.update(obs, conf, phase)
             trajectories.append(result.position)
 
         results[name] = {
-            'trajectory': np.array(trajectories),
-            'tracker': tracker,
+            "trajectory": np.array(trajectories),
+            "tracker": tracker,
         }
 
         stats = tracker.get_statistics()
@@ -223,7 +224,7 @@ def demo_tracking_methods():
     print("=" * 80)
 
     for name, result in results.items():
-        traj = result['trajectory']
+        traj = result["trajectory"]
         errors = np.linalg.norm(traj - data["true_trajectory"], axis=1)
 
         # Calculate error during occlusion
@@ -244,56 +245,69 @@ def demo_tracking_methods():
 
     # Plot 1: All trajectories
     ax1 = fig.add_subplot(gs[0, :])
-    ax1.plot(data["true_trajectory"][:, 0], data["true_trajectory"][:, 1],
-             'k--', linewidth=3, label='True', alpha=0.5)
+    ax1.plot(
+        data["true_trajectory"][:, 0],
+        data["true_trajectory"][:, 1],
+        "k--",
+        linewidth=3,
+        label="True",
+        alpha=0.5,
+    )
 
     # Plot observed points
     obs_array = np.array([obs for obs in data["observations"] if obs is not None])
     if len(obs_array) > 0:
-        ax1.scatter(obs_array[:, 0], obs_array[:, 1],
-                   c='green', s=20, alpha=0.5, label='Observed', zorder=5)
+        ax1.scatter(
+            obs_array[:, 0], obs_array[:, 1], c="green", s=20, alpha=0.5, label="Observed", zorder=5
+        )
 
-    colors = ['blue', 'red', 'orange', 'purple']
-    for (name, result), color in zip(results.items(), colors):
-        traj = result['trajectory']
-        ax1.plot(traj[:, 0], traj[:, 1], '-', color=color, linewidth=2, label=name, alpha=0.7)
+    colors = ["blue", "red", "orange", "purple"]
+    for (name, result), color in zip(results.items(), colors, strict=False):
+        traj = result["trajectory"]
+        ax1.plot(traj[:, 0], traj[:, 1], "-", color=color, linewidth=2, label=name, alpha=0.7)
 
-    ax1.set_title('Trajectory Comparison', fontsize=14, fontweight='bold')
-    ax1.set_xlabel('X Position (pixels)')
-    ax1.set_ylabel('Y Position (pixels)')
-    ax1.legend(loc='best')
+    ax1.set_title("Trajectory Comparison", fontsize=14, fontweight="bold")
+    ax1.set_xlabel("X Position (pixels)")
+    ax1.set_ylabel("Y Position (pixels)")
+    ax1.legend(loc="best")
     ax1.grid(True, alpha=0.3)
-    ax1.axis('equal')
+    ax1.axis("equal")
 
     # Plots 2-5: Individual method comparisons
     plot_positions = [(1, 0), (1, 1), (2, 0), (2, 1)]
 
-    for (name, result), pos, color in zip(results.items(), plot_positions, colors):
+    for (name, result), pos, color in zip(results.items(), plot_positions, colors, strict=False):
         ax = fig.add_subplot(gs[pos[0], pos[1]])
-        traj = result['trajectory']
+        traj = result["trajectory"]
 
         # Plot true and tracked
-        ax.plot(data["true_trajectory"][:, 0], data["true_trajectory"][:, 1],
-               'k--', linewidth=2, label='True', alpha=0.5)
-        ax.plot(traj[:, 0], traj[:, 1], '-', color=color, linewidth=2, label='Tracked')
+        ax.plot(
+            data["true_trajectory"][:, 0],
+            data["true_trajectory"][:, 1],
+            "k--",
+            linewidth=2,
+            label="True",
+            alpha=0.5,
+        )
+        ax.plot(traj[:, 0], traj[:, 1], "-", color=color, linewidth=2, label="Tracked")
 
         # Highlight occluded segments
         for i, obs in enumerate(data["observations"]):
             if obs is None:
-                ax.plot(traj[i, 0], traj[i, 1], 'o', color='red', markersize=4, alpha=0.5)
+                ax.plot(traj[i, 0], traj[i, 1], "o", color="red", markersize=4, alpha=0.5)
 
-        ax.set_title(f'{name} Method', fontweight='bold')
-        ax.set_xlabel('X Position')
-        ax.set_ylabel('Y Position')
+        ax.set_title(f"{name} Method", fontweight="bold")
+        ax.set_xlabel("X Position")
+        ax.set_ylabel("Y Position")
         ax.legend()
         ax.grid(True, alpha=0.3)
-        ax.axis('equal')
+        ax.axis("equal")
 
-    plt.suptitle('Occlusion Tracking Methods Comparison', fontsize=16, fontweight='bold')
+    plt.suptitle("Occlusion Tracking Methods Comparison", fontsize=16, fontweight="bold")
 
     # Save figure
     output_dir = Path("data/exports")
-    plt.savefig(output_dir / "tracking_methods_comparison.png", dpi=150, bbox_inches='tight')
+    plt.savefig(output_dir / "tracking_methods_comparison.png", dpi=150, bbox_inches="tight")
     print(f"\n✅ Comparison saved to: {output_dir / 'tracking_methods_comparison.png'}")
 
     plt.close()
@@ -339,7 +353,9 @@ def demo_prediction_accuracy():
 
             # Calculate error during occlusion
             traj = tracker.get_trajectory()
-            errors = np.linalg.norm(traj[10:10+duration] - true_traj[10:10+duration], axis=1)
+            errors = np.linalg.norm(
+                traj[10 : 10 + duration] - true_traj[10 : 10 + duration], axis=1
+            )
             avg_error = np.mean(errors)
 
             results_by_duration[method.value].append(avg_error)
@@ -349,17 +365,17 @@ def demo_prediction_accuracy():
     fig, ax = plt.subplots(figsize=(10, 6))
 
     for method, errors in results_by_duration.items():
-        ax.plot(occlusion_durations, errors, 'o-', linewidth=2, markersize=8, label=method)
+        ax.plot(occlusion_durations, errors, "o-", linewidth=2, markersize=8, label=method)
 
-    ax.set_title('Prediction Error vs Occlusion Duration', fontsize=14, fontweight='bold')
-    ax.set_xlabel('Occlusion Duration (frames)', fontsize=12)
-    ax.set_ylabel('Average Prediction Error (pixels)', fontsize=12)
+    ax.set_title("Prediction Error vs Occlusion Duration", fontsize=14, fontweight="bold")
+    ax.set_xlabel("Occlusion Duration (frames)", fontsize=12)
+    ax.set_ylabel("Average Prediction Error (pixels)", fontsize=12)
     ax.legend(fontsize=11)
     ax.grid(True, alpha=0.3)
 
     # Save figure
     output_dir = Path("data/exports")
-    plt.savefig(output_dir / "prediction_accuracy.png", dpi=150, bbox_inches='tight')
+    plt.savefig(output_dir / "prediction_accuracy.png", dpi=150, bbox_inches="tight")
     print(f"\n✅ Analysis saved to: {output_dir / 'prediction_accuracy.png'}")
 
     plt.close()

@@ -8,13 +8,14 @@ This module analyzes left/right symmetry in swimming technique:
 - Rotation imbalance
 """
 
-from typing import Dict, List, Tuple, Optional
+from typing import Any
+
 import numpy as np
 from scipy.spatial.distance import euclidean
 from scipy.stats import pearsonr
 
 from src.analysis.dtw_analyzer import DTWAnalyzer
-from src.utils.smoothing import smooth_trajectory_kalman, calculate_velocity, calculate_speed
+from src.utils.smoothing import calculate_speed, calculate_velocity, smooth_trajectory_kalman
 
 
 class SymmetryAnalyzer:
@@ -34,9 +35,9 @@ class SymmetryAnalyzer:
         self,
         left_hand_path: np.ndarray,
         right_hand_path: np.ndarray,
-        left_elbow_angles: Optional[np.ndarray] = None,
-        right_elbow_angles: Optional[np.ndarray] = None,
-    ) -> Dict[str, float]:
+        left_elbow_angles: np.ndarray | None = None,
+        right_elbow_angles: np.ndarray | None = None,
+    ) -> dict[str, float]:
         """Analyze arm symmetry (trajectory and angles).
 
         Args:
@@ -46,9 +47,9 @@ class SymmetryAnalyzer:
             right_elbow_angles: Array of right elbow angles over time.
 
         Returns:
-            Dictionary of symmetry metrics.
+            Dict[str, float]: Dictionary of symmetry metrics.
         """
-        metrics = {}
+        metrics: dict[str, float] = {}
 
         # Trajectory symmetry
         if len(left_hand_path) > 0 and len(right_hand_path) > 0:
@@ -91,9 +92,11 @@ class SymmetryAnalyzer:
 
                 # Speed asymmetry (%)
                 if left_mean_speed + right_mean_speed > 0:
-                    speed_asymmetry = abs(left_mean_speed - right_mean_speed) / (
-                        left_mean_speed + right_mean_speed
-                    ) * 100
+                    speed_asymmetry = (
+                        abs(left_mean_speed - right_mean_speed)
+                        / (left_mean_speed + right_mean_speed)
+                        * 100
+                    )
                     metrics["speed_asymmetry_pct"] = speed_asymmetry
                 else:
                     metrics["speed_asymmetry_pct"] = 0.0
@@ -131,11 +134,11 @@ class SymmetryAnalyzer:
 
     def analyze_leg_symmetry(
         self,
-        left_ankle_path: Optional[np.ndarray] = None,
-        right_ankle_path: Optional[np.ndarray] = None,
-        left_knee_angles: Optional[np.ndarray] = None,
-        right_knee_angles: Optional[np.ndarray] = None,
-    ) -> Dict[str, float]:
+        left_ankle_path: np.ndarray | None = None,
+        right_ankle_path: np.ndarray | None = None,
+        left_knee_angles: np.ndarray | None = None,
+        right_knee_angles: np.ndarray | None = None,
+    ) -> dict[str, float]:
         """Analyze leg symmetry (kick timing and power).
 
         Args:
@@ -147,7 +150,7 @@ class SymmetryAnalyzer:
         Returns:
             Dictionary of leg symmetry metrics.
         """
-        metrics = {}
+        metrics: dict[str, float] = {}
 
         # Kick trajectory symmetry
         if left_ankle_path is not None and right_ankle_path is not None:
@@ -184,7 +187,7 @@ class SymmetryAnalyzer:
         self,
         left_hand_path: np.ndarray,
         right_hand_path: np.ndarray,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Analyze temporal symmetry (stroke timing consistency).
 
         Args:
@@ -194,7 +197,7 @@ class SymmetryAnalyzer:
         Returns:
             Dictionary of temporal symmetry metrics.
         """
-        metrics = {}
+        metrics: dict[str, float] = {}
 
         if len(left_hand_path) < 10 or len(right_hand_path) < 10:
             return metrics
@@ -215,9 +218,9 @@ class SymmetryAnalyzer:
 
         # Stroke count asymmetry
         if len(left_peaks) + len(right_peaks) > 0:
-            count_asymmetry = abs(len(left_peaks) - len(right_peaks)) / (
-                len(left_peaks) + len(right_peaks)
-            ) * 100
+            count_asymmetry = (
+                abs(len(left_peaks) - len(right_peaks)) / (len(left_peaks) + len(right_peaks)) * 100
+            )
             metrics["stroke_count_asymmetry_pct"] = count_asymmetry
         else:
             metrics["stroke_count_asymmetry_pct"] = 0.0
@@ -257,7 +260,7 @@ class SymmetryAnalyzer:
         self,
         left_hand_path: np.ndarray,
         right_hand_path: np.ndarray,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Estimate force imbalance from hand trajectories.
 
         Note: This is an indirect estimate based on velocity and acceleration.
@@ -270,7 +273,7 @@ class SymmetryAnalyzer:
         Returns:
             Dictionary of force imbalance estimates.
         """
-        metrics = {}
+        metrics: dict[str, float] = {}
 
         if len(left_hand_path) < 3 or len(right_hand_path) < 3:
             return metrics
@@ -299,9 +302,11 @@ class SymmetryAnalyzer:
 
             # Force imbalance estimate (%)
             if left_mean_accel + right_mean_accel > 0:
-                force_imbalance = abs(left_mean_accel - right_mean_accel) / (
-                    left_mean_accel + right_mean_accel
-                ) * 100
+                force_imbalance = (
+                    abs(left_mean_accel - right_mean_accel)
+                    / (left_mean_accel + right_mean_accel)
+                    * 100
+                )
                 metrics["force_imbalance_pct"] = force_imbalance
             else:
                 metrics["force_imbalance_pct"] = 0.0
@@ -314,9 +319,9 @@ class SymmetryAnalyzer:
 
     def estimate_rotation_imbalance(
         self,
-        shoulder_angles: Optional[Dict[str, np.ndarray]] = None,
-        hip_angles: Optional[Dict[str, np.ndarray]] = None,
-    ) -> Dict[str, float]:
+        shoulder_angles: dict[str, np.ndarray] | None = None,
+        hip_angles: dict[str, np.ndarray] | None = None,
+    ) -> dict[str, float]:
         """Estimate body rotation imbalance.
 
         Args:
@@ -326,7 +331,7 @@ class SymmetryAnalyzer:
         Returns:
             Dictionary of rotation imbalance metrics.
         """
-        metrics = {}
+        metrics: dict[str, float] = {}
 
         # Shoulder rotation imbalance
         if shoulder_angles is not None:
@@ -368,8 +373,8 @@ class SymmetryAnalyzer:
         self,
         left_hand_path: np.ndarray,
         right_hand_path: np.ndarray,
-        angles_over_time: Optional[Dict[str, np.ndarray]] = None,
-    ) -> Dict[str, any]:
+        angles_over_time: dict[str, np.ndarray] | None = None,
+    ) -> dict[str, Any]:
         """Perform comprehensive symmetry analysis.
 
         Args:
@@ -380,7 +385,7 @@ class SymmetryAnalyzer:
         Returns:
             Dictionary with all symmetry metrics and interpretation.
         """
-        results = {}
+        results: dict[str, Any] = {}
 
         # Arm symmetry
         left_elbow = angles_over_time.get("left_elbow") if angles_over_time else None
@@ -392,15 +397,11 @@ class SymmetryAnalyzer:
         results["arm_symmetry"] = arm_symmetry
 
         # Temporal symmetry
-        temporal_symmetry = self.analyze_temporal_symmetry(
-            left_hand_path, right_hand_path
-        )
+        temporal_symmetry = self.analyze_temporal_symmetry(left_hand_path, right_hand_path)
         results["temporal_symmetry"] = temporal_symmetry
 
         # Force imbalance
-        force_imbalance = self.estimate_force_imbalance(
-            left_hand_path, right_hand_path
-        )
+        force_imbalance = self.estimate_force_imbalance(left_hand_path, right_hand_path)
         results["force_imbalance"] = force_imbalance
 
         # Overall symmetry score (0-100, 100 = perfect symmetry)
@@ -438,9 +439,9 @@ class SymmetryAnalyzer:
 
     def _calculate_overall_symmetry_score(
         self,
-        arm_symmetry: Dict[str, float],
-        temporal_symmetry: Dict[str, float],
-        force_imbalance: Dict[str, float],
+        arm_symmetry: dict[str, float],
+        temporal_symmetry: dict[str, float],
+        force_imbalance: dict[str, float],
     ) -> float:
         """Calculate overall symmetry score (0-100).
 
@@ -505,10 +506,10 @@ class SymmetryAnalyzer:
 
     def _generate_symmetry_recommendations(
         self,
-        arm_symmetry: Dict[str, float],
-        temporal_symmetry: Dict[str, float],
-        force_imbalance: Dict[str, float],
-    ) -> List[str]:
+        arm_symmetry: dict[str, float],
+        temporal_symmetry: dict[str, float],
+        force_imbalance: dict[str, float],
+    ) -> list[str]:
         """Generate recommendations based on symmetry analysis.
 
         Args:
@@ -531,8 +532,7 @@ class SymmetryAnalyzer:
         # Speed asymmetry
         if arm_symmetry.get("speed_asymmetry_pct", 0) > 15:
             recommendations.append(
-                "⚠️ Speed imbalance between arms. "
-                "Work on equalizing stroke speed for both arms."
+                "⚠️ Speed imbalance between arms. " "Work on equalizing stroke speed for both arms."
             )
 
         # Temporal asymmetry
@@ -557,6 +557,8 @@ class SymmetryAnalyzer:
             )
 
         if not recommendations:
-            recommendations.append("✅ Good symmetry overall! Continue maintaining balanced technique.")
+            recommendations.append(
+                "✅ Good symmetry overall! Continue maintaining balanced technique."
+            )
 
         return recommendations

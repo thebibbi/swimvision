@@ -12,12 +12,13 @@ Provides a consistent interface regardless of backend model.
 
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Dict, List, Optional, Tuple
+
 import numpy as np
 
 
 class PoseModel(Enum):
     """Available pose estimation models."""
+
     YOLO11_NANO = "yolo11n-pose"
     YOLO11_SMALL = "yolo11s-pose"
     YOLO11_MEDIUM = "yolo11m-pose"
@@ -30,11 +31,12 @@ class PoseModel(Enum):
 
 class KeypointFormat(Enum):
     """Keypoint format standards."""
-    COCO_17 = "coco17"          # 17 keypoints (YOLO, OpenPose)
-    COCO_133 = "coco133"        # 133 keypoints (AlphaPose)
+
+    COCO_17 = "coco17"  # 17 keypoints (YOLO, OpenPose)
+    COCO_133 = "coco133"  # 133 keypoints (AlphaPose)
     MEDIAPIPE_33 = "mediapipe"  # 33 landmarks
-    SMPL_24 = "smpl"            # 24 joints
-    SMPL_X_127 = "smplx"        # 127 keypoints (body + face + hands)
+    SMPL_24 = "smpl"  # 24 joints
+    SMPL_X_127 = "smplx"  # 127 keypoints (body + face + hands)
 
 
 class BasePoseEstimator(ABC):
@@ -68,7 +70,7 @@ class BasePoseEstimator(ABC):
         self,
         image: np.ndarray,
         return_image: bool = True,
-    ) -> Tuple[Optional[Dict], Optional[np.ndarray]]:
+    ) -> tuple[dict | None, np.ndarray | None]:
         """Estimate pose from image.
 
         Args:
@@ -131,9 +133,9 @@ class BasePoseEstimator(ABC):
 
     def get_keypoint(
         self,
-        pose_data: Dict,
+        pose_data: dict,
         keypoint_name: str,
-    ) -> Optional[Tuple[float, float, float]]:
+    ) -> tuple[float, float, float] | None:
         """Get a specific keypoint by name.
 
         Args:
@@ -143,8 +145,8 @@ class BasePoseEstimator(ABC):
         Returns:
             Tuple of (x, y, confidence) or None if not found.
         """
-        keypoint_names = pose_data.get('keypoint_names', [])
-        keypoints = pose_data.get('keypoints', np.array([]))
+        keypoint_names = pose_data.get("keypoint_names", [])
+        keypoints = pose_data.get("keypoints", np.array([]))
 
         if keypoint_name not in keypoint_names:
             return None
@@ -155,69 +157,108 @@ class BasePoseEstimator(ABC):
 
         return tuple(keypoints[idx])
 
-    def get_model_info(self) -> Dict:
+    def get_model_info(self) -> dict:
         """Get model information.
 
         Returns:
             Dictionary with model metadata.
         """
         return {
-            'name': self.model_name,
-            'device': self.device,
-            'confidence_threshold': self.confidence,
-            'format': self.get_keypoint_format().value,
-            'supports_3d': self.supports_3d(),
-            'supports_multi_person': self.supports_multi_person(),
+            "name": self.model_name,
+            "device": self.device,
+            "confidence_threshold": self.confidence,
+            "format": self.get_keypoint_format().value,
+            "supports_3d": self.supports_3d(),
+            "supports_multi_person": self.supports_multi_person(),
         }
 
 
 # Keypoint name mappings for different formats
 COCO_17_KEYPOINTS = [
-    'nose',
-    'left_eye', 'right_eye',
-    'left_ear', 'right_ear',
-    'left_shoulder', 'right_shoulder',
-    'left_elbow', 'right_elbow',
-    'left_wrist', 'right_wrist',
-    'left_hip', 'right_hip',
-    'left_knee', 'right_knee',
-    'left_ankle', 'right_ankle',
+    "nose",
+    "left_eye",
+    "right_eye",
+    "left_ear",
+    "right_ear",
+    "left_shoulder",
+    "right_shoulder",
+    "left_elbow",
+    "right_elbow",
+    "left_wrist",
+    "right_wrist",
+    "left_hip",
+    "right_hip",
+    "left_knee",
+    "right_knee",
+    "left_ankle",
+    "right_ankle",
 ]
 
 MEDIAPIPE_33_LANDMARKS = [
-    'nose',
-    'left_eye_inner', 'left_eye', 'left_eye_outer',
-    'right_eye_inner', 'right_eye', 'right_eye_outer',
-    'left_ear', 'right_ear',
-    'mouth_left', 'mouth_right',
-    'left_shoulder', 'right_shoulder',
-    'left_elbow', 'right_elbow',
-    'left_wrist', 'right_wrist',
-    'left_pinky', 'right_pinky',
-    'left_index', 'right_index',
-    'left_thumb', 'right_thumb',
-    'left_hip', 'right_hip',
-    'left_knee', 'right_knee',
-    'left_ankle', 'right_ankle',
-    'left_heel', 'right_heel',
-    'left_foot_index', 'right_foot_index',
+    "nose",
+    "left_eye_inner",
+    "left_eye",
+    "left_eye_outer",
+    "right_eye_inner",
+    "right_eye",
+    "right_eye_outer",
+    "left_ear",
+    "right_ear",
+    "mouth_left",
+    "mouth_right",
+    "left_shoulder",
+    "right_shoulder",
+    "left_elbow",
+    "right_elbow",
+    "left_wrist",
+    "right_wrist",
+    "left_pinky",
+    "right_pinky",
+    "left_index",
+    "right_index",
+    "left_thumb",
+    "right_thumb",
+    "left_hip",
+    "right_hip",
+    "left_knee",
+    "right_knee",
+    "left_ankle",
+    "right_ankle",
+    "left_heel",
+    "right_heel",
+    "left_foot_index",
+    "right_foot_index",
 ]
 
 SMPL_24_JOINTS = [
-    'pelvis',
-    'left_hip', 'right_hip', 'spine1',
-    'left_knee', 'right_knee', 'spine2',
-    'left_ankle', 'right_ankle', 'spine3',
-    'left_foot', 'right_foot', 'neck',
-    'left_collar', 'right_collar', 'head',
-    'left_shoulder', 'right_shoulder',
-    'left_elbow', 'right_elbow',
-    'left_wrist', 'right_wrist',
-    'left_hand', 'right_hand',
+    "pelvis",
+    "left_hip",
+    "right_hip",
+    "spine1",
+    "left_knee",
+    "right_knee",
+    "spine2",
+    "left_ankle",
+    "right_ankle",
+    "spine3",
+    "left_foot",
+    "right_foot",
+    "neck",
+    "left_collar",
+    "right_collar",
+    "head",
+    "left_shoulder",
+    "right_shoulder",
+    "left_elbow",
+    "right_elbow",
+    "left_wrist",
+    "right_wrist",
+    "left_hand",
+    "right_hand",
 ]
 
 
-def get_keypoint_names(format: KeypointFormat) -> List[str]:
+def get_keypoint_names(format: KeypointFormat) -> list[str]:
     """Get keypoint names for a given format.
 
     Args:
@@ -257,23 +298,23 @@ def map_keypoints_to_coco17(
     if source_format == KeypointFormat.MEDIAPIPE_33:
         # Mapping indices
         mp_to_coco = {
-            0: 0,   # nose
-            2: 1,   # left_eye
-            5: 2,   # right_eye
-            7: 3,   # left_ear
-            8: 4,   # right_ear
+            0: 0,  # nose
+            2: 1,  # left_eye
+            5: 2,  # right_eye
+            7: 3,  # left_ear
+            8: 4,  # right_ear
             11: 5,  # left_shoulder
             12: 6,  # right_shoulder
             13: 7,  # left_elbow
             14: 8,  # right_elbow
             15: 9,  # left_wrist
-            16: 10, # right_wrist
-            23: 11, # left_hip
-            24: 12, # right_hip
-            25: 13, # left_knee
-            26: 14, # right_knee
-            27: 15, # left_ankle
-            28: 16, # right_ankle
+            16: 10,  # right_wrist
+            23: 11,  # left_hip
+            24: 12,  # right_hip
+            25: 13,  # left_knee
+            26: 14,  # right_knee
+            27: 15,  # left_ankle
+            28: 16,  # right_ankle
         }
 
         for mp_idx, coco_idx in mp_to_coco.items():
@@ -289,7 +330,7 @@ def map_keypoints_to_coco17(
             18: 7,  # left_elbow
             19: 8,  # right_elbow
             20: 9,  # left_wrist
-            21: 10, # right_wrist
+            21: 10,  # right_wrist
             1: 11,  # left_hip
             2: 12,  # right_hip
             4: 13,  # left_knee
