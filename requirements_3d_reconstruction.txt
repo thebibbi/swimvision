@@ -1,0 +1,126 @@
+# SwimVision Pro - 3D Reconstruction Requirements
+# Phase 1.5: Temporal 2D→3D Lifting + Detailed Mesh Reconstruction
+#
+# This file contains dependencies for:
+# - MotionAGFormer (primary 2D→3D lifter)
+# - PoseFormerV2 (alternative frequency-domain lifter)
+# - SAM3D Body (detailed 3D mesh reconstruction)
+#
+# Install with: pip install -r requirements_3d_reconstruction.txt
+#
+# Prerequisites:
+# - Python 3.9+
+# - PyTorch 2.0+ with CUDA 11.8+ or MPS (Apple Silicon)
+# - requirements_advanced.txt (for RTMPose + ByteTrack)
+
+# ==============================================================================
+# Core Dependencies (PyTorch assumed already installed from requirements_advanced.txt)
+# ==============================================================================
+
+# Tensor operations and utilities
+einops>=0.7.0                    # Elegant tensor operations
+timm>=0.9.0                      # Vision models library
+numpy>=1.23.0                    # Array operations
+
+# Transformers and NLP tooling (for SAM3D)
+transformers>=4.40.0             # Hugging Face transformers
+tokenizers>=0.15.0               # Fast tokenizers
+
+# ==============================================================================
+# MotionAGFormer Dependencies
+# ==============================================================================
+
+# Core requirements from MotionAGFormer
+# Repository: https://github.com/TaatiTeam/MotionAGFormer
+# Note: Will install MotionAGFormer from GitHub directly
+
+# Already covered by core deps:
+# - torch>=2.0.0
+# - einops>=0.7.0
+# - timm>=0.9.0
+
+# ==============================================================================
+# PoseFormerV2 Dependencies
+# ==============================================================================
+
+# Core requirements from PoseFormerV2
+# Repository: https://github.com/qitaozhao/poseformerv2
+# Note: Will install PoseFormerV2 from GitHub directly
+
+# Already covered by core deps:
+# - torch>=1.13.0 (we have 2.0+)
+# - numpy>=1.23.0
+
+# ==============================================================================
+# SAM3D Body Dependencies
+# ==============================================================================
+
+# SAM3D Body from Meta
+# Repository: https://github.com/facebookresearch/sam-3d-body
+# Install via: pip install git+https://github.com/facebookresearch/sam-3d-body.git
+
+# Will be installed separately via git+https URL
+# Requirements already covered:
+# - transformers>=4.40.0
+# - timm>=0.9.0
+# - einops>=0.7.0
+
+# ==============================================================================
+# 3D Mesh Operations
+# ==============================================================================
+
+trimesh>=3.20.0                  # 3D mesh loading and processing
+pyrender>=0.1.45                 # Mesh rendering (already in requirements_advanced.txt)
+pyglet<2                         # Required by pyrender
+scikit-image>=0.21.0            # Image processing utilities
+
+# PyTorch3D (optional but highly recommended for 3D operations)
+# Install separately based on platform:
+# CUDA 11.8: pip install pytorch3d -f https://dl.fbaipublicfiles.com/pytorch3d/packaging/wheels/py39_cu118_pyt200/download.html
+# CPU/MPS: pip install pytorch3d
+# Note: May require compilation, optional for basic functionality
+
+# ==============================================================================
+# Visualization and Export
+# ==============================================================================
+
+matplotlib>=3.7.0                # Plotting (already in requirements.txt)
+Pillow>=10.0.0                   # Image operations (already in requirements.txt)
+imageio>=2.31.0                  # Image/video I/O
+imageio-ffmpeg>=0.4.9            # FFmpeg wrapper for video
+
+# ==============================================================================
+# Optimization and Performance
+# ==============================================================================
+
+tensorboard>=2.14.0              # Training visualization (optional)
+tqdm>=4.66.0                     # Progress bars (already in requirements.txt)
+
+# ==============================================================================
+# Data Handling
+# ==============================================================================
+
+h5py>=3.9.0                      # HDF5 file format
+scipy>=1.11.0                    # Scientific computing (already in requirements.txt)
+
+# ==============================================================================
+# Development and Testing
+# ==============================================================================
+
+pytest>=7.4.0                    # Testing framework (in requirements-dev.txt)
+pytest-cov>=4.1.0                # Coverage reporting (in requirements-dev.txt)
+
+# ==============================================================================
+# Notes:
+# ==============================================================================
+#
+# Installation Order:
+# 1. Install PyTorch with CUDA/MPS support (from requirements_advanced.txt)
+# 2. Install this file: pip install -r requirements_3d_reconstruction.txt
+# 3. Install MotionAGFormer: pip install git+https://github.com/TaatiTeam/MotionAGFormer.git
+# 4. Install PoseFormerV2: pip install git+https://github.com/qitaozhao/poseformerv2.git
+# 5. Install SAM3D Body: pip install git+https://github.com/facebookresearch/sam-3d-body.git
+# 6. (Optional) Install PyTorch3D for advanced 3D operations
+#
+# See scripts/setup_3d_reconstruction.sh for automated installation
+#
