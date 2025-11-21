@@ -18,7 +18,7 @@ torchvision==0.20.1          # Vision utilities
 opencv-python==4.10.0.84
 numpy==1.26.4                # NOTE: <2.0 required by ultralytics
 pillow==10.4.0
-av==13.1.0                   # PyAV for video I/O
+av==16.0.1                   # PyAV for video I/O
 
 # ========================================
 # Time Series Analysis
