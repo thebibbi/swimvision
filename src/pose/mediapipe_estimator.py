@@ -7,6 +7,7 @@ Install: pip install mediapipe
 """
 
 import cv2
+import logging
 import numpy as np
 
 from src.pose.base_estimator import (
@@ -15,12 +16,15 @@ from src.pose.base_estimator import (
     map_keypoints_to_coco17,
 )
 
+logger = logging.getLogger(__name__)
+
 try:
     import mediapipe as mp
 
     MEDIAPIPE_AVAILABLE = True
 except ImportError:
     MEDIAPIPE_AVAILABLE = False
+    logger.warning("MediaPipe not available. Install with: pip install mediapipe")
 
 
 class MediaPipeEstimator(BasePoseEstimator):
@@ -62,19 +66,24 @@ class MediaPipeEstimator(BasePoseEstimator):
 
     def load_model(self):
         """Load MediaPipe Pose model."""
-        self.mp_pose = mp.solutions.pose
-        self.mp_drawing = mp.solutions.drawing_utils
-        self.mp_drawing_styles = mp.solutions.drawing_styles
+        try:
+            self.mp_pose = mp.solutions.pose
+            self.mp_drawing = mp.solutions.drawing_utils
+            self.mp_drawing_styles = mp.solutions.drawing_styles
 
-        self.model = self.mp_pose.Pose(
-            static_image_mode=False,
-            model_complexity=self.model_complexity,
-            smooth_landmarks=self.smooth_landmarks,
-            enable_segmentation=self.enable_segmentation,
-            smooth_segmentation=True,
-            min_detection_confidence=self.min_detection_confidence,
-            min_tracking_confidence=self.min_tracking_confidence,
-        )
+            self.model = self.mp_pose.Pose(
+                static_image_mode=False,
+                model_complexity=self.model_complexity,
+                smooth_landmarks=self.smooth_landmarks,
+                enable_segmentation=self.enable_segmentation,
+                smooth_segmentation=True,
+                min_detection_confidence=self.min_detection_confidence,
+                min_tracking_confidence=self.min_tracking_confidence,
+            )
+            logger.info(f"MediaPipe Pose model loaded (complexity={self.model_complexity})")
+        except Exception as e:
+            logger.error(f"Failed to load MediaPipe Pose model: {e}")
+            raise
 
     def estimate_pose(
         self,
@@ -90,16 +99,38 @@ class MediaPipeEstimator(BasePoseEstimator):
         Returns:
             Tuple of (pose_data, annotated_image).
         """
-        # Convert BGR to RGB
-        image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        try:
+            # Convert BGR to RGB
+            image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-        # Process image
-        results = self.model.process(image_rgb)
+            # Process image
+            results = self.model.process(image_rgb)
 
-        # Check if pose detected
-        if not results.pose_landmarks:
+            # Check if pose detected
+            if not results or not results.pose_landmarks:
+                return None, image if return_image else None
+
+            # Extract keypoints
+            pose_data = self._format_output(results, image.shape)
+
+            # Annotate image if requested
+            annotated_image = None
+            if return_image:
+                annotated_image = image.copy()
+                self.mp_drawing.draw_landmarks(
+                    annotated_image,
+                    results.pose_landmarks,
+                    self.mp_pose.POSE_CONNECTIONS,
+                    landmark_drawing_spec=self.mp_drawing_styles.get_default_pose_landmarks_style()
+                )
+
+            return pose_data, annotated_image
+
+        except Exception as e:
+            logger.error(f"MediaPipe pose estimation failed: {e}")
             return None, image if return_image else None
 
+    def _format_output(self, results, image_shape: Tuple[int, int, int]) -> Dict:
         # Extract keypoints
         pose_data = self._format_output(results, image.shape)
 
@@ -326,7 +357,31 @@ class MediaPipeEstimator(BasePoseEstimator):
             "format": KeypointFormat.COCO_17,
         }
 
+    def close(self):
+        """Explicitly close MediaPipe resources."""
+        if hasattr(self, 'model') and self.model is not None:
+            try:
+                self.model.close()
+                logger.debug("MediaPipe model closed successfully")
+            except Exception as e:
+                logger.warning(f"Error closing MediaPipe model: {e}")
+            finally:
+                self.model = None
+
+    def __enter__(self):
+        """Context manager entry."""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit."""
+        self.close()
+        return False
+
     def __del__(self):
-        """Cleanup MediaPipe resources."""
-        if hasattr(self, "model") and self.model is not None:
-            self.model.close()
+        """Cleanup MediaPipe resources on deletion."""
+        # Safer cleanup that handles interpreter shutdown
+        try:
+            self.close()
+        except Exception:
+            # Ignore errors during interpreter shutdown
+            pass

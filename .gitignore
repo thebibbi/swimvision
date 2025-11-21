@@ -131,6 +131,10 @@ $RECYCLE.BIN/
 tmp/
 temp/
 *.tmp
+
+# External model repositories
+models/motionagformer/
+models/poseformerv2/
 yolo11n-pose.pt
 yolo11s-pose.pt
 setup.sh
