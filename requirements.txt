@@ -31,7 +31,7 @@ similaritymeasures==1.1.0    # Additional trajectory similarity metrics
 # Machine Learning
 # ========================================
 scikit-learn==1.5.2
-pandas==2.2.3
+pandas==2.3.3
 catboost==1.2.7              # Primary injury prediction model
 xgboost==2.1.2               # Secondary model
 lightgbm==4.5.0              # Fast experimentation
