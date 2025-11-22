@@ -9,6 +9,7 @@ Combines different tracking approaches:
 
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any
 
 import numpy as np
 from scipy.interpolate import interp1d

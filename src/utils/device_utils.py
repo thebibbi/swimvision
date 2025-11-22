@@ -294,6 +294,58 @@ def print_device_info():
     DeviceManager.print_device_info()
 
 
+def normalize_device_for_framework(device: str, framework: str = "pytorch") -> str:
+    """
+    Normalize device string for specific frameworks.
+
+    Different frameworks have different device string requirements:
+    - PyTorch: "cuda:0", "cuda", "mps", "cpu"
+    - MMPose: "cuda", "mps", "cpu" (no device index)
+    - MediaPipe: "cpu" only
+    - TensorFlow: "/GPU:0", "/CPU:0"
+
+    Args:
+        device: Device string (e.g., "cuda:0", "cuda", "mps", "cpu")
+        framework: Target framework ("pytorch", "mmpose", "mediapipe", "tensorflow")
+
+    Returns:
+        Normalized device string for the framework
+
+    Examples:
+        >>> normalize_device_for_framework("cuda:0", "mmpose")
+        "cuda"
+        >>> normalize_device_for_framework("cuda:0", "pytorch")
+        "cuda:0"
+        >>> normalize_device_for_framework("mps", "mediapipe")
+        "cpu"
+    """
+    framework = framework.lower()
+    device_lower = device.lower()
+
+    # MediaPipe only supports CPU
+    if framework == "mediapipe":
+        return "cpu"
+
+    # MMPose doesn't like device indices
+    if framework == "mmpose":
+        if "cuda" in device_lower:
+            return "cuda"
+        elif "mps" in device_lower:
+            return "mps"
+        else:
+            return "cpu"
+
+    # TensorFlow uses different notation
+    if framework == "tensorflow":
+        if "cuda" in device_lower:
+            return "/GPU:0"
+        else:
+            return "/CPU:0"
+
+    # PyTorch (default) - keep as is
+    return device
+
+
 # Auto-detect on module import
 _AUTO_DEVICE = DeviceManager.detect_device()
 logger.info(f"Auto-detected device: {_AUTO_DEVICE}")

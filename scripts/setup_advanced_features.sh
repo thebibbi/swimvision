@@ -79,12 +79,15 @@ if [ ! -d "external/ByteTrack" ]; then
     cd external
     git clone https://github.com/ifzhang/ByteTrack.git
     cd ByteTrack
+    # Install ByteTrack dependencies
     pip install -r requirements.txt
-    python setup.py develop
+    # Install ByteTrack in editable mode without build isolation to avoid
+    # torch import issues inside pip's temporary build env
+    pip install --no-build-isolation -e .
     cd ../..
     echo "✅ ByteTrack installed"
 else
-    echo "✅ ByteTrack already installed"
+    echo "✅ ByteTrack already installed (skipping reinstall)"
 fi
 echo ""
 

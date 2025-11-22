@@ -20,7 +20,7 @@ from src.pose.base_estimator import (
     BasePoseEstimator,
     KeypointFormat,
 )
-from src.utils.device_utils import get_optimal_device
+from src.utils.device_utils import get_optimal_device, normalize_device_for_framework
 
 try:
     import mmcv
@@ -120,6 +120,9 @@ class RTMPoseEstimator(BasePoseEstimator):
         self.config_path = config_path
         self.checkpoint_path = checkpoint_path
 
+        # Normalize device for MMPose (needs "cuda" not "cuda:0")
+        self.mmpose_device = normalize_device_for_framework(self.device, "mmpose")
+
         self.load_model()
 
     def _find_config(self, config_name: str) -> str:
@@ -199,7 +202,7 @@ class RTMPoseEstimator(BasePoseEstimator):
         print(f"  Device: {self.device}")
 
         self.model = init_model(
-            str(self.config_path), str(self.checkpoint_path), device=self.device
+            str(self.config_path), str(self.checkpoint_path), device=self.mmpose_device
         )
 
         print(f"✅ {self.model_variant} loaded successfully")

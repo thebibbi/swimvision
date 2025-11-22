@@ -52,6 +52,53 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Core pose estimation models
+mediapipe = [
+    "mediapipe>=0.10.0",
+]
+
+mmpose = [
+    "openmim>=0.3.9",
+    "mmengine>=0.10.0",
+    "mmcv>=2.0.0",
+    "mmpose>=1.2.0",
+]
+
+# Tracking
+tracking = [
+    "lap>=0.4.0",
+    "filterpy>=1.4.5",
+]
+
+# 3D reconstruction
+reconstruction = [
+    "smplx>=0.1.28",
+    "trimesh>=4.0.0",
+    "pyrender>=0.1.45",
+    "chumpy>=0.70",
+]
+
+# FreeMoCap integration
+freemocap = [
+    "freemocap>=0.3.0",
+    "aniposelib>=0.4.0",
+    "toml>=0.10.2",
+]
+
+# ONNX optimization
+onnx = [
+    "onnx>=1.15.0",
+    "onnxruntime-gpu>=1.17.0",
+    "onnxsim>=0.4.35",
+]
+
+# Video processing
+video = [
+    "decord>=0.6.0",
+    "streamlit-webrtc>=0.47.0",
+]
+
+# Development tools
 dev = [
     "pytest>=8.3.0",
     "pytest-cov>=5.0.0",
@@ -64,17 +111,32 @@ dev = [
     "ipykernel>=6.29.0",
 ]
 
+# Hardware support
 realsense = [
     "pyrealsense2>=2.55.1",
 ]
 
+# Export formats
 export = [
     "reportlab>=4.2.0",
     "openpyxl>=3.1.5",
 ]
 
+# Convenience groups
+basic = [
+    "swimvision[mediapipe,video]",
+]
+
+advanced = [
+    "swimvision[mmpose,tracking,reconstruction,onnx]",
+]
+
+complete = [
+    "swimvision[basic,advanced,freemocap,realsense,export]",
+]
+
 all = [
-    "swimvision[dev,realsense,export]",
+    "swimvision[complete,dev]",
 ]
 
 [project.urls]

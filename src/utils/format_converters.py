@@ -366,6 +366,82 @@ class KeypointConverter:
         return denormalized
 
     @staticmethod
+    def halpe26_to_coco17(halpe_keypoints: np.ndarray) -> np.ndarray:
+        """Convert Halpe-26 keypoints to COCO-17 format.
+
+        Halpe-26 adds pelvis, neck, head to COCO-17.
+        Indices: 0-16 are COCO-17, 17-18 are shoulders, 19-24 are hips/neck/head/pelvis
+
+        Args:
+            halpe_keypoints: Halpe-26 keypoints (26, 3)
+
+        Returns:
+            COCO-17 keypoints (17, 3)
+        """
+        assert halpe_keypoints.shape[0] == 26, "Expected 26 Halpe keypoints"
+        # First 17 keypoints are identical to COCO-17
+        return halpe_keypoints[:17].copy()
+
+    @staticmethod
+    def coco133_to_coco17(coco133_keypoints: np.ndarray) -> np.ndarray:
+        """Convert COCO-133 (wholebody) keypoints to COCO-17 format.
+
+        COCO-133 includes: 17 body + 6 feet + 68 face + 42 hands
+
+        Args:
+            coco133_keypoints: COCO-133 keypoints (133, 3)
+
+        Returns:
+            COCO-17 keypoints (17, 3)
+        """
+        assert coco133_keypoints.shape[0] == 133, "Expected 133 COCO wholebody keypoints"
+        # First 17 keypoints are the body keypoints (identical to COCO-17)
+        return coco133_keypoints[:17].copy()
+
+    @staticmethod
+    def openpose25_to_coco17(openpose_keypoints: np.ndarray) -> np.ndarray:
+        """Convert OpenPose-25 (body25) keypoints to COCO-17 format.
+
+        OpenPose-25 has different ordering than COCO-17.
+
+        Args:
+            openpose_keypoints: OpenPose-25 keypoints (25, 3)
+
+        Returns:
+            COCO-17 keypoints (17, 3)
+        """
+        assert openpose_keypoints.shape[0] == 25, "Expected 25 OpenPose keypoints"
+
+        # OpenPose to COCO-17 mapping
+        # OpenPose: 0=Nose, 1=Neck, 2=RShoulder, 3=RElbow, 4=RWrist,
+        #           5=LShoulder, 6=LElbow, 7=LWrist, 8=MidHip,
+        #           9=RHip, 10=RKnee, 11=RAnkle, 12=LHip,
+        #           13=LKnee, 14=LAnkle, 15=REye, 16=LEye,
+        #           17=REar, 18=LEar, 19-24=feet
+
+        coco17 = np.zeros((17, 3))
+
+        coco17[0] = openpose_keypoints[0]  # nose
+        coco17[1] = openpose_keypoints[16]  # left_eye
+        coco17[2] = openpose_keypoints[15]  # right_eye
+        coco17[3] = openpose_keypoints[18]  # left_ear
+        coco17[4] = openpose_keypoints[17]  # right_ear
+        coco17[5] = openpose_keypoints[5]  # left_shoulder
+        coco17[6] = openpose_keypoints[2]  # right_shoulder
+        coco17[7] = openpose_keypoints[6]  # left_elbow
+        coco17[8] = openpose_keypoints[3]  # right_elbow
+        coco17[9] = openpose_keypoints[7]  # left_wrist
+        coco17[10] = openpose_keypoints[4]  # right_wrist
+        coco17[11] = openpose_keypoints[12]  # left_hip
+        coco17[12] = openpose_keypoints[9]  # right_hip
+        coco17[13] = openpose_keypoints[13]  # left_knee
+        coco17[14] = openpose_keypoints[10]  # right_knee
+        coco17[15] = openpose_keypoints[14]  # left_ankle
+        coco17[16] = openpose_keypoints[11]  # right_ankle
+
+        return coco17
+
+    @staticmethod
     def convert_format(
         keypoints: np.ndarray, source_format: KeypointFormat, target_format: KeypointFormat
     ) -> np.ndarray:
@@ -389,26 +465,52 @@ class KeypointConverter:
         if source_format == KeypointFormat.COCO_17:
             if target_format == KeypointFormat.SMPL_24:
                 return KeypointConverter.coco17_to_smpl24(keypoints)
-            # Add more as needed
 
         # SMPL-24 conversions
         elif source_format == KeypointFormat.SMPL_24:
             if target_format == KeypointFormat.COCO_17:
                 return KeypointConverter.smpl24_to_coco17(keypoints)
-            # Add more as needed
 
         # MediaPipe conversions
         elif source_format == KeypointFormat.MEDIAPIPE_33:
             if target_format == KeypointFormat.COCO_17:
                 return KeypointConverter.mediapipe33_to_coco17(keypoints)
-            # Chain conversions if needed
             elif target_format == KeypointFormat.SMPL_24:
                 coco17 = KeypointConverter.mediapipe33_to_coco17(keypoints)
+                return KeypointConverter.coco17_to_smpl24(coco17)
+
+        # Halpe-26 conversions
+        elif source_format == KeypointFormat.HALPE_26:
+            if target_format == KeypointFormat.COCO_17:
+                return KeypointConverter.halpe26_to_coco17(keypoints)
+            elif target_format == KeypointFormat.SMPL_24:
+                coco17 = KeypointConverter.halpe26_to_coco17(keypoints)
+                return KeypointConverter.coco17_to_smpl24(coco17)
+
+        # COCO-133 conversions
+        elif source_format == KeypointFormat.COCO_133:
+            if target_format == KeypointFormat.COCO_17:
+                return KeypointConverter.coco133_to_coco17(keypoints)
+            elif target_format == KeypointFormat.SMPL_24:
+                coco17 = KeypointConverter.coco133_to_coco17(keypoints)
+                return KeypointConverter.coco17_to_smpl24(coco17)
+
+        # OpenPose-25 conversions
+        elif source_format == KeypointFormat.OPENPOSE_25:
+            if target_format == KeypointFormat.COCO_17:
+                return KeypointConverter.openpose25_to_coco17(keypoints)
+            elif target_format == KeypointFormat.SMPL_24:
+                coco17 = KeypointConverter.openpose25_to_coco17(keypoints)
                 return KeypointConverter.coco17_to_smpl24(coco17)
 
         raise ValueError(
             f"Conversion from {source_format.value} to {target_format.value} not implemented"
         )
+
+
+# Backward-compatible alias for older code that imported FormatConverter
+# New code should use KeypointConverter directly.
+FormatConverter = KeypointConverter
 
 
 def test_conversions():

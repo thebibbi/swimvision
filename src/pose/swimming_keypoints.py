@@ -1,5 +1,7 @@
 """Swimming-specific keypoint analysis."""
 
+import numpy as np
+
 from src.utils.geometry import calculate_angle, calculate_body_roll
 
 
@@ -241,12 +243,39 @@ class SwimmingKeypoints:
         if pose_data is None or "keypoints" not in pose_data:
             return None
 
-        kpt = pose_data["keypoints"].get(keypoint_name)
-        if kpt is None:
-            return None
+        keypoints = pose_data["keypoints"]
 
-        # Check confidence
-        if kpt["confidence"] < self.min_confidence:
-            return None
+        # Handle both numpy array format (from YOLO) and dict format
+        if isinstance(keypoints, np.ndarray):
+            # YOLO format: numpy array (17, 3) with [x, y, conf]
+            # Need to map keypoint_name to index
+            if "keypoint_names" not in pose_data:
+                return None
 
-        return (kpt["x"], kpt["y"])
+            keypoint_names = pose_data["keypoint_names"]
+            if keypoint_name not in keypoint_names:
+                return None
+
+            idx = keypoint_names.index(keypoint_name)
+            if idx >= len(keypoints):
+                return None
+
+            kpt = keypoints[idx]  # [x, y, conf]
+            x, y, conf = kpt[0], kpt[1], kpt[2]
+
+            # Check confidence
+            if conf < self.min_confidence:
+                return None
+
+            return (float(x), float(y))
+        else:
+            # Dictionary format (from other estimators)
+            kpt = keypoints.get(keypoint_name)
+            if kpt is None:
+                return None
+
+            # Check confidence
+            if kpt["confidence"] < self.min_confidence:
+                return None
+
+            return (kpt["x"], kpt["y"])

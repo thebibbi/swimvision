@@ -6,8 +6,9 @@ Excellent for CPU-only environments and real-time performance.
 Install: pip install mediapipe
 """
 
-import cv2
 import logging
+
+import cv2
 import numpy as np
 
 from src.pose.base_estimator import (
@@ -32,32 +33,32 @@ class MediaPipeEstimator(BasePoseEstimator):
 
     def __init__(
         self,
+        model_name: str = "mediapipe",
+        device: str = "cpu",
+        confidence: float = 0.5,
         model_complexity: int = 1,  # 0=lite, 1=full, 2=heavy
-        min_detection_confidence: float = 0.5,
         min_tracking_confidence: float = 0.5,
         enable_segmentation: bool = False,
         smooth_landmarks: bool = True,
-        device: str = "cpu",  # MediaPipe runs on CPU
     ):
         """Initialize MediaPipe estimator.
 
         Args:
-            model_complexity: Model complexity (0-2).
-            min_detection_confidence: Detection confidence threshold.
+            model_name: Model name (for compatibility, always 'mediapipe').
+            device: Device (MediaPipe runs on CPU only).
+            confidence: Detection confidence threshold.
+            model_complexity: Model complexity (0=lite, 1=full, 2=heavy).
             min_tracking_confidence: Tracking confidence threshold.
             enable_segmentation: Enable person segmentation.
             smooth_landmarks: Enable landmark smoothing.
-            device: Device (MediaPipe runs on CPU).
         """
-        super().__init__(
-            f"mediapipe_complexity_{model_complexity}", device, min_detection_confidence
-        )
+        # MediaPipe always runs on CPU
+        super().__init__(f"mediapipe_complexity_{model_complexity}", "cpu", confidence)
 
         if not MEDIAPIPE_AVAILABLE:
             raise ImportError("MediaPipe not installed. Install with: pip install mediapipe")
 
         self.model_complexity = model_complexity
-        self.min_detection_confidence = min_detection_confidence
         self.min_tracking_confidence = min_tracking_confidence
         self.enable_segmentation = enable_segmentation
         self.smooth_landmarks = smooth_landmarks
@@ -77,7 +78,7 @@ class MediaPipeEstimator(BasePoseEstimator):
                 smooth_landmarks=self.smooth_landmarks,
                 enable_segmentation=self.enable_segmentation,
                 smooth_segmentation=True,
-                min_detection_confidence=self.min_detection_confidence,
+                min_detection_confidence=self.confidence,
                 min_tracking_confidence=self.min_tracking_confidence,
             )
             logger.info(f"MediaPipe Pose model loaded (complexity={self.model_complexity})")
@@ -89,7 +90,7 @@ class MediaPipeEstimator(BasePoseEstimator):
         self,
         image: np.ndarray,
         return_image: bool = True,
-    ) -> tuple[dict | None, np.ndarray | None]:
+    ) -> tuple[list[dict] | None, np.ndarray | None]:
         """Estimate pose using MediaPipe.
 
         Args:
@@ -97,7 +98,8 @@ class MediaPipeEstimator(BasePoseEstimator):
             return_image: Whether to return annotated image.
 
         Returns:
-            Tuple of (pose_data, annotated_image).
+            Tuple of (pose_data_list, annotated_image).
+            pose_data_list: List with single pose dict (MediaPipe is single-person).
         """
         try:
             # Convert BGR to RGB
@@ -121,31 +123,15 @@ class MediaPipeEstimator(BasePoseEstimator):
                     annotated_image,
                     results.pose_landmarks,
                     self.mp_pose.POSE_CONNECTIONS,
-                    landmark_drawing_spec=self.mp_drawing_styles.get_default_pose_landmarks_style()
+                    landmark_drawing_spec=self.mp_drawing_styles.get_default_pose_landmarks_style(),
                 )
 
-            return pose_data, annotated_image
+            # Return as list for consistency with other estimators
+            return [pose_data], annotated_image
 
         except Exception as e:
             logger.error(f"MediaPipe pose estimation failed: {e}")
             return None, image if return_image else None
-
-    def _format_output(self, results, image_shape: Tuple[int, int, int]) -> Dict:
-        # Extract keypoints
-        pose_data = self._format_output(results, image.shape)
-
-        # Annotate image if requested
-        annotated_image = None
-        if return_image:
-            annotated_image = image.copy()
-            self.mp_drawing.draw_landmarks(
-                annotated_image,
-                results.pose_landmarks,
-                self.mp_pose.POSE_CONNECTIONS,
-                landmark_drawing_spec=self.mp_drawing_styles.get_default_pose_landmarks_style(),
-            )
-
-        return pose_data, annotated_image
 
     def _format_output(self, results, image_shape: tuple[int, int, int]) -> dict:
         """Format MediaPipe output to standard format.
@@ -359,7 +345,7 @@ class MediaPipeEstimator(BasePoseEstimator):
 
     def close(self):
         """Explicitly close MediaPipe resources."""
-        if hasattr(self, 'model') and self.model is not None:
+        if hasattr(self, "model") and self.model is not None:
             try:
                 self.model.close()
                 logger.debug("MediaPipe model closed successfully")

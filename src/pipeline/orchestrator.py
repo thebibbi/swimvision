@@ -28,7 +28,7 @@ from src.pose.model_registry import ModelRegistry
 from src.pose.rtmpose_estimator import RTMPoseEstimator
 
 # Import tracking
-from src.tracking.bytetrack_tracker import ByteTrackTracker, Detection
+from src.tracking.bytetrack_tracker import ByteTrackTracker
 
 # Import device utilities
 from src.utils.device_utils import get_optimal_device
@@ -378,19 +378,19 @@ class SwimVisionPipeline:
             return None
 
         try:
-            # Convert poses to Detection format for ByteTrack
+            # Convert poses to dict format for ByteTrack
             detections = []
             for pose in poses:
                 bbox = pose["bbox"]
-                score = pose["score"]
+                score = pose.get("score", pose.get("confidence", 0.0))
                 keypoints = pose.get("keypoints")
 
-                det = Detection(
-                    bbox=bbox[:4],
-                    score=score,
-                    class_id=0,  # All are swimmers
-                    keypoints=keypoints,
-                )
+                # ByteTrackTracker.update() expects list[dict]
+                det = {
+                    "bbox": bbox[:4] if len(bbox) >= 4 else bbox,
+                    "confidence": float(score),
+                    "keypoints": keypoints,
+                }
                 detections.append(det)
 
             # Update tracker
@@ -403,9 +403,11 @@ class SwimVisionPipeline:
                     "track_id": track.track_id,
                     "bbox": track.bbox,
                     "keypoints": track.keypoints,
-                    "score": track.score,
+                    "confidence": track.confidence,
                     "state": track.state.value,
-                    "trajectory": track.trajectory[-10:] if len(track.trajectory) > 0 else [],
+                    "trajectory": list(track.bbox_history)[-10:]
+                    if hasattr(track, "bbox_history")
+                    else [],
                     "velocity": track.get_velocity(),
                     "format": "coco17",
                 }

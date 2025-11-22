@@ -7,6 +7,7 @@ Detects when swimmer's hands are underwater (occluded) using:
 """
 
 from enum import Enum
+from typing import Any
 
 import numpy as np
 

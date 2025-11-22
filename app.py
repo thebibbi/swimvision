@@ -1,8 +1,13 @@
 """SwimVision Pro - Main Streamlit Application with Phase 2 Analysis."""
 
+import logging
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 import cv2
 import numpy as np
@@ -138,34 +143,85 @@ def process_video(
 
             # Estimate pose
             start_time = time.time()
-            pose_data, _ = pose_estimator.estimate_pose(frame, return_image=False)
+            pose_result, _ = pose_estimator.estimate_pose(frame, return_image=False)
             inference_time = time.time() - start_time
 
             frame_times.append(inference_time)
 
-            # Analyze pose
-            if pose_data is not None:
-                detected_count += 1
-                pose_sequence.append(pose_data)
+            # Handle both single dict and list[dict] returns
+            # Multi-person models (YOLO, RTMPose, ViTPose) return list[dict]
+            # Single-person models (MediaPipe, SMPL-X) return single dict
+            if pose_result is not None:
+                # Normalize to list format
+                if isinstance(pose_result, list):
+                    pose_data_list = pose_result
+                else:
+                    pose_data_list = [pose_result]
 
-                # Extract trajectories
-                if extract_trajectory:
-                    left_wrist = pose_estimator.get_keypoint(pose_data, "left_wrist")
-                    right_wrist = pose_estimator.get_keypoint(pose_data, "right_wrist")
+                # For single-swimmer analysis, use first detection
+                if len(pose_data_list) > 0:
+                    pose_data = pose_data_list[0]
+                    # Debug: Check what pose_data actually is
+                    logger.debug(f"pose_data type: {type(pose_data)}")
+                    if isinstance(pose_data, dict):
+                        logger.debug(f"pose_data keys: {pose_data.keys()}")
+                    else:
+                        logger.error(f"ERROR: pose_data is not a dict! It's {type(pose_data)}")
+                        # If it's a numpy array, we have a problem
+                        if isinstance(pose_data, np.ndarray):
+                            logger.error(f"pose_data shape: {pose_data.shape}")
+                            # Skip this frame if pose_data is wrong type
+                            continue
 
-                    if left_wrist:
-                        left_hand_path.append((left_wrist[0], left_wrist[1]))
-                    if right_wrist:
-                        right_hand_path.append((right_wrist[0], right_wrist[1]))
+                    detected_count += 1
+                    pose_sequence.append(pose_data)
 
-                # Extract angles
-                angles = st.session_state.swimming_analyzer.get_body_angles(pose_data)
-                for angle_name in angles_over_time:
-                    value = angles.get(angle_name)
-                    angles_over_time[angle_name].append(
-                        float(value) if value is not None else float(np.nan)
-                    )
+                    # Extract trajectories
+                    if extract_trajectory:
+                        try:
+                            logger.debug("Getting left wrist from pose_data")
+                            left_wrist = pose_estimator.get_keypoint(pose_data, "left_wrist")
+                            logger.debug("Getting right wrist from pose_data")
+                            right_wrist = pose_estimator.get_keypoint(pose_data, "right_wrist")
+
+                            if left_wrist:
+                                left_hand_path.append((left_wrist[0], left_wrist[1]))
+                            if right_wrist:
+                                right_hand_path.append((right_wrist[0], right_wrist[1]))
+                        except AttributeError as e:
+                            import traceback
+
+                            logger.error(f"Error in trajectory extraction: {e}")
+                            logger.error(f"Full traceback: {traceback.format_exc()}")
+                            logger.error(f"pose_data type: {type(pose_data)}")
+                            if isinstance(pose_data, dict):
+                                logger.error(f"pose_data keys: {pose_data.keys()}")
+                                if "keypoints" in pose_data:
+                                    logger.error(f"keypoints type: {type(pose_data['keypoints'])}")
+                            else:
+                                logger.error(f"pose_data content: {pose_data}")
+                            raise
+
+                    # Extract angles
+                    try:
+                        angles = st.session_state.swimming_analyzer.get_body_angles(pose_data)
+                        for angle_name in angles_over_time:
+                            value = angles.get(angle_name)
+                            angles_over_time[angle_name].append(
+                                float(value) if value is not None else float(np.nan)
+                            )
+                    except AttributeError as e:
+                        logger.error(f"Error in get_body_angles: {e}")
+                        logger.error(f"pose_data type: {type(pose_data)}")
+                        if isinstance(pose_data, dict):
+                            logger.error(f"pose_data keys: {pose_data.keys()}")
+                        else:
+                            logger.error(f"pose_data content: {pose_data}")
+                        raise
+                else:
+                    pose_data = None
             else:
+                pose_data = None
                 # Debug: Log when pose is not detected
                 if frame_idx % 30 == 0:  # Log every 30 frames to avoid spam
                     st.write(f"Frame {frame_idx}: No pose detected")
@@ -179,14 +235,23 @@ def process_video(
 
             # Draw visualizations (only if pose was detected)
             if pose_data is not None:
-                if show_skeleton:
-                    frame = st.session_state.pose_overlay.draw_skeleton(frame, pose_data)
+                try:
+                    if show_skeleton:
+                        frame = st.session_state.pose_overlay.draw_skeleton(frame, pose_data)
 
-                if show_bbox and "bbox" in pose_data and pose_data["bbox"] is not None:
-                    frame = st.session_state.pose_overlay.draw_bbox(frame, pose_data["bbox"])
+                    if show_bbox and "bbox" in pose_data and pose_data["bbox"] is not None:
+                        frame = st.session_state.pose_overlay.draw_bbox(frame, pose_data["bbox"])
 
-                if show_angles:
-                    frame = st.session_state.pose_overlay.draw_angles(frame, pose_data, angles)
+                    if show_angles:
+                        frame = st.session_state.pose_overlay.draw_angles(frame, pose_data, angles)
+                except AttributeError as e:
+                    logger.error(f"Error in pose overlay drawing: {e}")
+                    logger.error(f"pose_data type: {type(pose_data)}")
+                    if isinstance(pose_data, dict):
+                        logger.error(f"pose_data keys: {pose_data.keys()}")
+                    else:
+                        logger.error(f"pose_data content: {pose_data}")
+                    raise
 
                 if show_trajectory and len(left_hand_path) > 1:
                     frame = st.session_state.pose_overlay.draw_trajectory(
@@ -570,9 +635,21 @@ with st.sidebar:
     # Pose estimation settings
     st.subheader("Pose Estimation")
 
+    pose_models = [
+        "YOLO11",
+        "MediaPipe",
+        "OpenPose",
+        "AlphaPose",
+        "RTMPose",
+        "ViTPose",
+        "SMPL-X",
+        "FreeMoCap (Multi-Camera 3D)",
+        "Multi-Model Fusion",
+    ]
+
     pose_model_type = st.selectbox(
         "Pose Model",
-        ["YOLO11", "MediaPipe", "OpenPose", "AlphaPose", "SMPL-X", "Multi-Model Fusion"],
+        pose_models,
         index=0,
         help="Select pose estimation model",
     )
@@ -599,6 +676,54 @@ with st.sidebar:
             index=0,
             help="AlphaPose model variant",
         )
+    elif pose_model_type == "RTMPose":
+        model_variant = st.selectbox(
+            "RTMPose Variant",
+            ["rtmpose-t", "rtmpose-s", "rtmpose-m", "rtmpose-l"],
+            index=2,
+            help="MMPose RTMPose variants (tiny → large)",
+        )
+    elif pose_model_type == "ViTPose":
+        model_variant = st.selectbox(
+            "ViTPose Variant",
+            ["vitpose-b", "vitpose-l", "vitpose-h"],
+            index=0,
+            help="ViTPose variants (base/large/huge)",
+        )
+    elif pose_model_type == "FreeMoCap (Multi-Camera 3D)":
+        st.info("🎥 FreeMoCap enables multi-camera 3D motion capture")
+
+        camera_count = st.number_input(
+            "Number of Cameras",
+            min_value=1,
+            max_value=8,
+            value=4,
+            help="Number of synchronized cameras for 3D reconstruction",
+        )
+
+        calibration_file = st.file_uploader(
+            "Upload Calibration File",
+            type=["toml", "json"],
+            help="Camera calibration from FreeMoCap or Anipose",
+        )
+
+        use_charuco = st.checkbox(
+            "Use CharuCo Board Calibration",
+            value=False,
+            help="Use CharuCo board for automatic calibration",
+        )
+
+        if calibration_file:
+            st.success(f"✅ Calibration file loaded: {calibration_file.name}")
+        else:
+            st.warning("⚠️ No calibration file provided. Single-camera mode will be used.")
+
+        model_variant = {
+            "camera_count": camera_count,
+            "calibration_file": calibration_file,
+            "use_charuco": use_charuco,
+        }
+
     elif pose_model_type == "Multi-Model Fusion":
         fusion_method = st.selectbox(
             "Fusion Method",
@@ -607,7 +732,7 @@ with st.sidebar:
         )
         st.multiselect(
             "Models to Fuse",
-            ["YOLO11", "MediaPipe", "OpenPose"],
+            ["YOLO11", "MediaPipe", "OpenPose", "RTMPose", "ViTPose"],
             default=["YOLO11", "MediaPipe"],
             help="Select models to combine",
         )
@@ -753,6 +878,24 @@ with st.sidebar:
                         confidence=confidence_threshold,
                     )
 
+                elif pose_model_type == "RTMPose":
+                    from src.pose.rtmpose_estimator import RTMPoseEstimator
+
+                    st.session_state.pose_estimator = RTMPoseEstimator(
+                        model_variant=model_variant,
+                        device=device,
+                        confidence=confidence_threshold,
+                    )
+
+                elif pose_model_type == "ViTPose":
+                    from src.pose.vitpose_estimator import ViTPoseEstimator
+
+                    st.session_state.pose_estimator = ViTPoseEstimator(
+                        model_variant=model_variant,
+                        device=device,
+                        confidence=confidence_threshold,
+                    )
+
                 elif pose_model_type == "SMPL-X":
                     from src.pose.smpl_estimator import SMPLEstimator
 
@@ -765,6 +908,8 @@ with st.sidebar:
                 elif pose_model_type == "Multi-Model Fusion":
                     from src.pose.mediapipe_estimator import MediaPipeEstimator
                     from src.pose.model_fusion import FusionMethod, MultiModelFusion
+                    from src.pose.rtmpose_estimator import RTMPoseEstimator
+                    from src.pose.vitpose_estimator import ViTPoseEstimator
                     from src.pose.yolo_estimator import YOLOPoseEstimator
 
                     # Create individual models
@@ -773,6 +918,16 @@ with st.sidebar:
                         YOLOPoseEstimator("yolo11n-pose.pt", device, confidence_threshold)
                     )
                     models.append(MediaPipeEstimator(1, confidence_threshold, device))
+                    models.append(
+                        RTMPoseEstimator(
+                            "rtmpose-m", device=device, confidence=confidence_threshold
+                        )
+                    )
+                    models.append(
+                        ViTPoseEstimator(
+                            "vitpose-b", device=device, confidence=confidence_threshold
+                        )
+                    )
 
                     # Map fusion method
                     method_map = {

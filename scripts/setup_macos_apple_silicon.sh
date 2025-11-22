@@ -163,7 +163,9 @@ else
 fi
 
 pip install -r requirements.txt
-python setup.py develop
+# Install ByteTrack in editable mode without build isolation to avoid
+# torch import issues inside pip's temporary build environment
+pip install --no-build-isolation -e .
 cd ../..
 
 echo -e "${GREEN}✅ Core requirements installed${NC}\n"

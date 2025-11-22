@@ -25,6 +25,7 @@ MANIFEST
 
 # Virtual environments
 venv/
+venv_advanced/
 env/
 ENV/
 env.bak/
@@ -132,9 +133,10 @@ tmp/
 temp/
 *.tmp
 
-# External model repositories
+# External model repositories and dependencies
 models/motionagformer/
 models/poseformerv2/
+external/
 yolo11n-pose.pt
 yolo11s-pose.pt
 setup.sh
