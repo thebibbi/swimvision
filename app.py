@@ -180,9 +180,26 @@ def process_video(
                     if extract_trajectory:
                         try:
                             logger.debug("Getting left wrist from pose_data")
-                            left_wrist = pose_estimator.get_keypoint(pose_data, "left_wrist")
-                            logger.debug("Getting right wrist from pose_data")
-                            right_wrist = pose_estimator.get_keypoint(pose_data, "right_wrist")
+                            # Access keypoints directly from dictionary to handle different estimator formats
+                            keypoints_dict = pose_data["keypoints"]
+                            if isinstance(keypoints_dict, dict):
+                                left_wrist_data = keypoints_dict.get("left_wrist")
+                                right_wrist_data = keypoints_dict.get("right_wrist")
+
+                                left_wrist = (
+                                    (left_wrist_data["x"], left_wrist_data["y"])
+                                    if left_wrist_data
+                                    else None
+                                )
+                                right_wrist = (
+                                    (right_wrist_data["x"], right_wrist_data["y"])
+                                    if right_wrist_data
+                                    else None
+                                )
+                            else:
+                                # Fallback to estimator method for array format (YOLO)
+                                left_wrist = pose_estimator.get_keypoint(pose_data, "left_wrist")
+                                right_wrist = pose_estimator.get_keypoint(pose_data, "right_wrist")
 
                             if left_wrist:
                                 left_hand_path.append((left_wrist[0], left_wrist[1]))
@@ -315,6 +332,10 @@ def process_video(
         }
 
     except Exception as e:
+        import traceback
+
+        logger.error(f"Error processing video: {e}")
+        logger.error(f"Full traceback:\n{traceback.format_exc()}")
         st.error(f"Error processing video: {e}")
         return {}
 
@@ -857,7 +878,7 @@ with st.sidebar:
                     complexity = complexity_map[model_variant]
                     st.session_state.pose_estimator = MediaPipeEstimator(
                         model_complexity=complexity,
-                        min_detection_confidence=confidence_threshold,
+                        confidence=confidence_threshold,
                         device=device,
                     )
 
@@ -917,7 +938,9 @@ with st.sidebar:
                     models.append(
                         YOLOPoseEstimator("yolo11n-pose.pt", device, confidence_threshold)
                     )
-                    models.append(MediaPipeEstimator(1, confidence_threshold, device))
+                    models.append(
+                        MediaPipeEstimator(confidence=confidence_threshold, device=device)
+                    )
                     models.append(
                         RTMPoseEstimator(
                             "rtmpose-m", device=device, confidence=confidence_threshold
